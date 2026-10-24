@@ -180,6 +180,7 @@ function mostrar(a) {
           <button class="btn btn-primario" type="button" data-acao="pretendo">Quero assistir</button>
           <button class="btn btn-contorno" type="button" data-acao="assistido">Já assisti, sortear outro</button>
           <button class="btn btn-contorno" type="button" data-acao="outro">Não curti, sortear outro</button>
+          <button class="btn btn-contorno" type="button" data-acao="pretendo-proximo">Pretendo assistir, sortear outro</button>
         </div>
         <p><a href="anime.html?id=${a.id}">Ver página completa do anime</a></p>
       </div>
@@ -204,11 +205,15 @@ async function agir(acao, anime, botao) {
     return entrar();
   }
   botao.disabled = true;
+  // "pretendo-proximo" salva como Pretendo assistir e já sorteia o próximo
+  const sortearDepois = acao === "assistido" || acao === "pretendo-proximo";
+  if (acao === "pretendo-proximo") acao = "pretendo";
   try {
     await definirStatus(anime, acao); // "assistido" ou "pretendo"
     naMinhaLista.add(anime.id);
-    if (acao === "assistido") {
-      toast(`"${anime.titulo}" foi para a sua lista como Já assisti`);
+    if (sortearDepois) {
+      toast(`"${anime.titulo}" foi para a sua lista como ${acao === "assistido" ? "Já assisti" : "Pretendo assistir"}`);
+      atualizarContagem();
       sortear();
     } else {
       toast(`"${anime.titulo}" foi para a sua lista como Pretendo assistir`);
