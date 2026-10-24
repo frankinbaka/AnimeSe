@@ -1032,3 +1032,11 @@ h3 { font-size: 1.05rem; }
   .feed-barra { top: 10px; right: 10px; }
   .denuncia-colunas { grid-template-columns: 1fr; }
 }
+
+/* Botão para ativar o som quando o vídeo começou mudo */
+.btn-som {
+  position: absolute; z-index: 2; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  padding: 12px 20px; border: 0; border-radius: 999px; cursor: pointer;
+  background: rgba(15,20,40,.85); color: #fff; font: inherit; font-weight: 700;
+}
+.btn-som:hover { background: var(--sakura); }

@@ -139,7 +139,8 @@ const observador = new IntersectionObserver((entradas) => {
     if (!e.isIntersecting) continue;
     const itens = [...feed.querySelectorAll(".item-feed")];
     const i = itens.indexOf(e.target);
-    itens.forEach((el, j) => (Math.abs(j - i) <= 1 ? ligarVideo(el) : desligarVideo(el)));
+    // Só o vídeo na tela fica carregado e tocando; os outros são desligados
+    itens.forEach((el, j) => (j === i ? ligarVideo(el) : desligarVideo(el)));
     history.replaceState(null, "", `feed.html?item=${e.target.dataset.chave}`);
     if (i >= itens.length - 3) carregarMais();
   }
@@ -147,13 +148,43 @@ const observador = new IntersectionObserver((entradas) => {
 
 function observarItem(el) { if (el) observador.observe(el); }
 
-function ligarVideo(el) {
-  const midia = el.querySelector("[data-embed]");
-  if (!midia || midia.querySelector("iframe")) return;
-  midia.insertAdjacentHTML("beforeend", `<iframe src="${midia.dataset.embed}" title="Vídeo" loading="lazy" allowfullscreen
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>`);
+/**
+ * Reprodução automática. Os navegadores só deixam um vídeo tocar sozinho
+ * COM SOM depois que a pessoa já clicou ou tocou em algo na página. Antes
+ * disso, o vídeo começa mudo e aparece o botão "Ativar som".
+ */
+const podeTocarComSom = () => Boolean(navigator.userActivation?.hasBeenActive);
+
+function urlAutoplay(embed, rede, mudo) {
+  const url = new URL(embed);
+  if (rede === "youtube") {
+    url.searchParams.set("autoplay", "1");
+    url.searchParams.set("mute", mudo ? "1" : "0");
+    url.searchParams.set("playsinline", "1");
+  } else if (rede === "tiktok") {
+    url.searchParams.set("autoplay", "1");
+    url.searchParams.set("muted", mudo ? "1" : "0");
+  }
+  // Instagram não permite reprodução automática em sites de fora
+  return url.toString();
 }
-function desligarVideo(el) { el.querySelector("[data-embed] iframe")?.remove(); }
+
+function ligarVideo(el, forcarSom = false) {
+  const midia = el.querySelector("[data-embed]");
+  if (!midia || (midia.querySelector("iframe") && !forcarSom)) return;
+  midia.querySelector("iframe")?.remove();
+  midia.querySelector(".btn-som")?.remove();
+  const rede = midia.dataset.rede;
+  const mudo = !forcarSom && !podeTocarComSom() && rede !== "instagram";
+  midia.insertAdjacentHTML("beforeend", `<iframe src="${esc(urlAutoplay(midia.dataset.embed, rede, mudo))}" title="Vídeo" allowfullscreen
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+    ${mudo ? `<button type="button" class="btn-som">🔇 Ativar som</button>` : ""}`);
+  midia.querySelector(".btn-som")?.addEventListener("click", () => ligarVideo(el, true));
+}
+function desligarVideo(el) {
+  el.querySelector("[data-embed] iframe")?.remove();
+  el.querySelector("[data-embed] .btn-som")?.remove();
+}
 
 // Teclado: setas para cima e para baixo trocam de vídeo
 document.addEventListener("keydown", (e) => {
