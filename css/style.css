@@ -600,3 +600,31 @@ h3 { font-size: 1.05rem; }
   .menu-usuario .nome-curto { display: none; }
 }
 .sorteado .hero-chamada { color: var(--sakura-escuro); }
+
+/* ---------- Celular: informações centralizadas ---------- */
+@media (max-width: 860px) {
+  /* Destaque da página inicial */
+  .hero .container { text-align: center; justify-items: center; }
+  .hero h1 { margin-left: auto; margin-right: auto; }
+  .hero-meta, .hero-acoes { justify-content: center; }
+  .hero-sinopse { margin-left: auto; margin-right: auto; }
+
+  /* Página do anime: pôster, título e informações no centro;
+     a franquia vem depois das informações, não antes do título */
+  .anime-topo { justify-items: center; text-align: center; gap: 24px; }
+  .anime-coluna-esquerda { display: contents; }
+  .anime-coluna-esquerda .poster-grande { order: 1; margin: 0 auto; }
+  .anime-topo > div:not(.anime-coluna-esquerda) { order: 2; width: 100%; }
+  .anime-coluna-esquerda .temporadas { order: 3; width: 100%; max-width: 480px; text-align: left; }
+  .anime-numeros, .generos, .opcoes-status { justify-content: center; }
+  .anime-numeros li { min-width: 100px; }
+  .painel-lista { text-align: center; }
+  .painel-lista textarea { text-align: left; }
+  .sinopse { text-align: left; margin-left: auto; margin-right: auto; }
+
+  /* O que assistir? */
+  .sorteio-topo { text-align: center; }
+  .sorteado { justify-items: center; text-align: center; }
+  .sorteado .generos, .sorteado-acoes { justify-content: center; }
+  .sorteado-sinopse { text-align: left; }
+}
