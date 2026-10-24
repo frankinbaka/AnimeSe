@@ -14,11 +14,16 @@
 <body>
   <header id="site-header"></header>
   <main>
-    <section class="hero" id="hero" aria-label="Destaque da temporada">
-      <div class="hero-fundo" id="hero-fundo"></div>
-      <div class="container" id="hero-conteudo">
-        <div><p class="hero-chamada">Carregando a temporada…</p><h1>&nbsp;</h1></div>
+    <section class="hero carrossel" id="carrossel" aria-roledescription="carrossel" aria-label="Destaques">
+      <div class="container slide-conteudo"><div><p class="hero-chamada">Carregando destaques…</p><h2 class="slide-titulo">&nbsp;</h2></div></div>
+    </section>
+
+    <section class="secao container" id="secao-novidades" hidden>
+      <div class="secao-topo">
+        <h2>Novidades</h2>
+        <a href="novidades.html">Ver todas</a>
       </div>
+      <div class="grade-posts" id="grade-novidades"></div>
     </section>
 
     <section class="secao container">
@@ -51,6 +56,8 @@
     </section>
   </main>
   <footer id="site-footer"></footer>
+  <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
+  <script defer src="/_vercel/insights/script.js"></script>
   <script type="module" src="js/paginas/inicio.js"></script>
 </body>
 </html>

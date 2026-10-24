@@ -4,7 +4,7 @@
 // ============================================================
 
 import { NOME_DO_SITE, AUTOR_DO_SITE } from "./config.js";
-import { usuarioAtual, lerPerfil, entrarComGoogle, sair, MODO_DEMO, nomeStatus } from "./store.js";
+import { usuarioAtual, lerPerfil, entrarComGoogle, sair, MODO_DEMO, nomeStatus, clienteSupabase } from "./store.js";
 
 /** Escapa texto vindo da API antes de inserir no HTML. */
 export function esc(texto) {
@@ -99,6 +99,7 @@ export function toast(msg) {
 
 const LINKS = [
   { href: "index.html", texto: "Início" },
+  { href: "novidades.html", texto: "Novidades" },
   { href: "buscar.html", texto: "Buscar" },
   { href: "sortear.html", texto: "O que assistir?" },
   { href: "comunidade.html", texto: "Comunidade" },
@@ -151,6 +152,28 @@ export async function montarLayout() {
   }
 
   await montarMenuUsuario();
+  registrarVisita();
+}
+
+/**
+ * Conta a visita para as estatísticas do admin. O navegador recebe um
+ * código aleatório só dele (sem nome, e-mail ou IP). Falhas são ignoradas.
+ */
+function registrarVisita() {
+  const db = clienteSupabase();
+  if (!db) return;
+  let visitante = null;
+  try {
+    visitante = localStorage.getItem("animese:visitante");
+    if (!visitante) {
+      visitante = crypto.randomUUID();
+      localStorage.setItem("animese:visitante", visitante);
+    }
+  } catch {
+    visitante = sessionStorage.getItem?.("animese:visitante") || crypto.randomUUID();
+  }
+  const pagina = location.pathname.replace(/\/$/, "/index.html") || "/index.html";
+  db.rpc("registrar_visita", { p_visitor: visitante, p_path: pagina }).then(() => {}, () => {});
 }
 
 async function montarMenuUsuario() {
@@ -175,6 +198,7 @@ async function montarMenuUsuario() {
     <div class="menu-dropdown" role="menu">
       <a href="perfil.html" role="menuitem">Meu perfil</a>
       <a href="lista.html" role="menuitem">Minha lista</a>
+      ${perfil?.papel === "admin" ? `<a href="admin.html" role="menuitem">Painel admin</a>` : ""}
       <hr>
       <button type="button" role="menuitem" id="btn-sair">Sair</button>
     </div>`;
