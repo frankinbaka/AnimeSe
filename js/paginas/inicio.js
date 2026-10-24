@@ -1,6 +1,6 @@
 // Página inicial: destaque da temporada, temporada atual, top e próximos.
 import { montarLayout, cardAnime, esqueletos, caixaErro, esc, formatarNota, formatarNumero } from "../ui.js";
-import { temporadaAtual, topAnimes, proximaTemporada, nomeTemporada } from "../jikan.js";
+import { temporadaAtual, topAnimes, proximaTemporada, nomeTemporada, temporadaDeHoje } from "../mal.js";
 
 await montarLayout();
 
@@ -11,15 +11,14 @@ grade.innerHTML = esqueletos(12);
 faixaTop.innerHTML = esqueletos(8);
 faixaProx.innerHTML = esqueletos(8);
 
-// As chamadas entram na fila da API uma por vez (limite do Jikan)
 try {
   const { itens } = await temporadaAtual();
   if (itens.length) {
     // Destaque: o mais bem avaliado entre os 10 mais populares da temporada
     const destaque = [...itens.slice(0, 10)].sort((a, b) => (b.nota || 0) - (a.nota || 0))[0];
     montarHero(destaque);
-    const exemplo = itens.find((a) => a.temporada) || itens[0];
-    document.getElementById("titulo-temporada").textContent = `Temporada de ${nomeTemporada(exemplo.temporada, exemplo.ano)}`;
+    const { ano, estacao } = temporadaDeHoje();
+    document.getElementById("titulo-temporada").textContent = `Temporada de ${nomeTemporada(estacao, ano)}`;
   }
   grade.innerHTML = itens.slice(0, 18).map((a) => cardAnime(a)).join("");
 } catch (e) {

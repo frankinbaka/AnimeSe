@@ -1,6 +1,6 @@
 // Página de um anime: dados do MAL + status na lista do usuário.
 import { montarLayout, caixaErro, esc, formatarNota, formatarNumero, toast, entrar } from "../ui.js";
-import { detalhes, traduzirStatus, nomeTemporada } from "../jikan.js";
+import { detalhes, traduzirStatus, nomeTemporada } from "../mal.js";
 import { usuarioAtual, statusNaLista, definirStatus, removerDaLista, STATUS, nomeStatus } from "../store.js";
 
 await montarLayout();

@@ -133,7 +133,7 @@ export async function montarLayout() {
   footer.innerHTML = `
     <div class="container">
       <p>Dados de animes fornecidos pelo <a href="https://myanimelist.net" target="_blank" rel="noopener">MyAnimeList</a>
-      através da <a href="https://jikan.moe" target="_blank" rel="noopener">API Jikan</a>.
+      através da API oficial.
       ${esc(NOME_DO_SITE)} não tem ligação oficial com o MyAnimeList.</p>
     </div>`;
 

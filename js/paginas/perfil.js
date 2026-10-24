@@ -4,7 +4,7 @@ import {
   nomeComTag, avatarHtml, sugerirTag, limparTag,
 } from "../ui.js";
 import { usuarioAtual, lerPerfil, salvarPerfil, lerLista } from "../store.js";
-import { buscar } from "../jikan.js";
+import { buscar } from "../mal.js";
 
 await montarLayout();
 

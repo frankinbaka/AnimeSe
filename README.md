@@ -2,7 +2,7 @@
 
 Site de animes com os lançamentos da temporada, busca com dados do MyAnimeList e uma lista pessoal para cada usuário (assistindo, já assisti, pretendo assistir, dropei).
 
-Feito com HTML, CSS e JavaScript puro, sem etapa de build. Dados de animes vêm da [API Jikan](https://docs.api.jikan.moe) (MyAnimeList) e login e banco de dados ficam no [Supabase](https://supabase.com).
+Feito com HTML, CSS e JavaScript puro, sem etapa de build. Dados de animes vêm da [API oficial do MyAnimeList](https://myanimelist.net/apiconfig/references/api/v2), por meio de uma pequena função na Vercel (`api/mal.js`) que guarda a chave e login e banco de dados ficam no [Supabase](https://supabase.com).
 
 ## Páginas
 
@@ -10,25 +10,33 @@ Feito com HTML, CSS e JavaScript puro, sem etapa de build. Dados de animes vêm 
 |---|---|
 | `index.html` | Destaque e animes da temporada atual, mais bem avaliados e próximos lançamentos |
 | `buscar.html` | Busca por nome, com paginação |
-| `anime.html?id=` | Sinopse, nota, episódios, gêneros, trailer e botões para marcar na lista |
+| `anime.html?id=` | Sinopse, nota, ranking, episódios, gêneros e botões para marcar na lista |
 | `lista.html` | Minha lista, separada por status |
 | `perfil.html` | Nick, anime favorito e a tag que aparece ao lado do nome (ex.: **SAO**) |
 
+## Chave do MyAnimeList (obrigatória)
+
+1. Entre em [myanimelist.net/apiconfig](https://myanimelist.net/apiconfig) com sua conta do MAL e clique em **Create ID**.
+2. *App Type*: **web**. Em *App Redirect URL* e *Homepage URL*, use o endereço do site na Vercel.
+3. Copie o **Client ID** (o Client Secret não é usado).
+4. Na Vercel, abra o projeto > **Settings > Environment Variables** e crie:
+   - *Key*: `MAL_CLIENT_ID`
+   - *Value*: o Client ID copiado
+5. Em **Deployments**, abra o menu (⋯) do último deploy e clique em **Redeploy** para a chave valer.
+
+A chave fica só na Vercel, nunca no código do site.
+
 ## Rodar no seu computador
 
-Os arquivos usam módulos JavaScript, então precisam de um servidor local (abrir o `index.html` direto com dois cliques não funciona). Qualquer uma destas opções serve, dentro da pasta do projeto:
+A ponte com o MyAnimeList (`api/mal.js`) é uma função da Vercel, então para testar no PC use o servidor da própria Vercel, dentro da pasta do projeto:
 
 ```bash
-# Com Python
-python -m http.server 5500
-
-# Ou com Node
-npx serve .
+npx vercel dev
 ```
 
-Depois abra `http://localhost:5500`. No VS Code, a extensão **Live Server** também funciona.
+Na primeira vez ele pede para entrar na conta e ligar a pasta ao projeto. As variáveis de ambiente são baixadas da Vercel com `npx vercel env pull`.
 
-Sem configurar nada, o site roda em **modo demonstração**: o login é simulado e a lista fica salva só no navegador. Serve para testar tudo antes de criar o banco.
+Sem o Supabase configurado, o site roda em **modo demonstração**: o login é simulado e a lista fica salva só no navegador.
 
 ## Ativar o login com Google (Supabase)
 
@@ -59,7 +67,8 @@ A cada `git push`, o site é atualizado sozinho.
 ├── index.html, buscar.html, anime.html, lista.html, perfil.html
 ├── css/style.css          estilos e paleta
 ├── js/config.js           chaves do Supabase e nome do site
-├── js/jikan.js            dados do MyAnimeList (com fila e cache por causa do limite da API)
+├── api/mal.js            função da Vercel: ponte com a API do MyAnimeList (guarda a chave)
+├── js/mal.js              dados dos animes e tradução de tipos, situação e gêneros
 ├── js/store.js            login, perfil e lista (Supabase ou modo demo)
 ├── js/ui.js               cabeçalho, menu, cards e a tag do favorito
 ├── js/paginas/            código de cada página
@@ -71,8 +80,8 @@ A cada `git push`, o site é atualizado sozinho.
 - Área de admin (a coluna `role` já existe em `profiles`; um admin é definido direto no Supabase)
 - Notícias de animes na página inicial
 - Perfil público com a lista de outros usuários
-- Tradução das sinopses para português
+- Tradução automática das sinopses para português (com cache no banco e correção manual pelo admin)
 
 ---
 
-Dados de animes: [MyAnimeList](https://myanimelist.net) via [Jikan](https://jikan.moe). O AnimeSe não tem ligação oficial com o MyAnimeList.
+Dados de animes: [MyAnimeList](https://myanimelist.net). O AnimeSe não tem ligação oficial com o MyAnimeList.

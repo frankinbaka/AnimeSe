@@ -1,6 +1,6 @@
 // Busca de animes por nome (ou lista completa da temporada atual).
 import { montarLayout, cardAnime, esqueletos, caixaErro, esc } from "../ui.js";
-import { buscar, temporadaAtual } from "../jikan.js";
+import { buscar, temporadaAtual } from "../mal.js";
 
 await montarLayout();
 
