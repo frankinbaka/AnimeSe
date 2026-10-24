@@ -11,6 +11,16 @@ import {
 
 await montarLayout();
 
+// Feed desligado em config.js: avisa e não carrega nada
+import { FEED_ATIVO } from "../config.js";
+if (!FEED_ATIVO) {
+  document.body.classList.remove("pagina-feed");
+  document.querySelector("main").innerHTML = `<div class="container"><div class="vazio" style="margin-top:48px">
+    <h2>O feed está desativado por enquanto</h2><p>Volte em breve.</p>
+    <a class="btn btn-primario" href="index.html">Ir para o início</a></div></div>`;
+  throw new Error("Feed desativado");
+}
+
 const feed = document.getElementById("feed");
 const barra = document.getElementById("feed-barra");
 const usuario = await usuarioAtual();

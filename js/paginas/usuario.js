@@ -8,6 +8,7 @@ import {
   REDES, videoIncorporavel,
 } from "../perfis.js";
 import { videosDoFeedDe, republicadosPor } from "../feed.js";
+import { FEED_ATIVO } from "../config.js";
 
 await montarLayout();
 
@@ -37,8 +38,8 @@ async function mostrar(p) {
     avaliacoesDoUsuario(p.id).catch(() => []),
     comentariosDoUsuario(p.id).catch(() => []),
     sugestoesDoUsuario(p.id).catch(() => []),
-    videosDoFeedDe(p.id).catch(() => []),
-    republicadosPor(p.id).catch(() => []),
+    FEED_ATIVO ? videosDoFeedDe(p.id).catch(() => []) : [],
+    FEED_ATIVO ? republicadosPor(p.id).catch(() => []) : [],
   ]);
 
   const redes = Object.keys(REDES).filter((r) => p[`${r}_url`]);
@@ -54,7 +55,7 @@ async function mostrar(p) {
     { id: "comentarios", nome: "Comentários", total: comentarios.length },
     { id: "sugestoes", nome: "Sugestões", total: sugestoes.length },
     ...(criador ? [{ id: "videos", nome: "Vídeos", total: videos.length + doFeed.length }] : []),
-    { id: "republicados", nome: "Republicados", total: republicados.length },
+    ...(FEED_ATIVO ? [{ id: "republicados", nome: "Republicados", total: republicados.length }] : []),
   ];
 
   alvo.innerHTML = `
@@ -65,7 +66,7 @@ async function mostrar(p) {
         <div class="perfil-selos">
           ${p.role === "admin" ? `<span class="selo selo-admin">Admin do AnimeSe</span>` : ""}
           ${criador ? `<span class="selo selo-criador">Criador de conteúdo</span>` : ""}
-          <span class="perfil-desde">No AnimeSe desde ${new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date(p.created_at))}</span>
+          ${p.created_at ? `<span class="perfil-desde">No AnimeSe desde ${new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date(p.created_at))}</span>` : ""}
         </div>
         ${p.bio ? `<p class="perfil-bio">${esc(p.bio)}</p>` : ""}
         ${redes.length ? `
@@ -152,7 +153,7 @@ async function mostrar(p) {
         ${redes.length ? `<p class="secao-descricao">Siga ${souEu ? "seus canais" : `os canais de ${esc(nome)}`}: ${redes.map((r) => `<a href="${esc(p[`${r}_url`])}" target="_blank" rel="noopener nofollow">${REDES[r].nome}</a>`).join(", ")}.</p>` : ""}
         ${videos.length ? `<h2 class="titulo-bloco">Em destaque</h2>${grade(videos)}` : ""}
         ${noFeed.length ? `<h2 class="titulo-bloco">Publicados no feed</h2>${grade(noFeed)}` : ""}
-        ${!videos.length && !noFeed.length ? vazio(souEu ? `Você ainda não publicou vídeos. <a href="feed.html">Publique no feed</a>.` : `${esc(nome)} ainda não publicou vídeos.`) : ""}`;
+        ${!videos.length && !noFeed.length ? vazio(souEu ? (FEED_ATIVO ? `Você ainda não publicou vídeos. <a href="feed.html">Publique no feed</a>.` : `Você ainda não destacou vídeos. <a href="perfil.html">Adicione no seu perfil</a>.`) : `${esc(nome)} ainda não publicou vídeos.`) : ""}`;
     },
     republicados() {
       if (!republicados.length) return (painel.innerHTML = vazio(`${pronome} ainda não republicou nada do feed.`));

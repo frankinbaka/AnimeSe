@@ -1050,3 +1050,4 @@ h3 { font-size: 1.05rem; }
 .feed-entrada strong { font-family: var(--fonte-titulo); font-weight: 400; font-size: 1.6rem; color: #fff; }
 .feed-entrada .icone-play { position: static; width: 84px; height: 84px; font-size: 2rem; background: var(--sakura); }
 .feed-entrada:hover .icone-play { transform: scale(1.06); }
+.contador-alerta[hidden] { display: none; }

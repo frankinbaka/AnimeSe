@@ -16,3 +16,7 @@ export const SUPABASE_ANON_KEY =
 
 export const NOME_DO_SITE = "AnimeSe";
 export const AUTOR_DO_SITE = "Frank Matheus";
+
+// Liga/desliga o Feed de vídeos (página, menu, denúncias e abas do perfil).
+// Os vídeos, curtidas e denúncias já salvos continuam no banco.
+export const FEED_ATIVO = false;

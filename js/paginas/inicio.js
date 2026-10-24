@@ -2,6 +2,7 @@
 import { COMUNIDADE_ATIVA, animesSugeridos } from "../comunidade.js";
 import { CONTEUDO_ATIVO, destaques, capaDoPost, TIPOS_POST } from "../conteudo.js";
 import { montarCarrossel } from "../carrossel.js";
+import { FEED_ATIVO } from "../config.js";
 import { montarLayout, cardAnime, esqueletos, caixaErro, esc, formatarNota, formatarNumero } from "../ui.js";
 import { temporadaAtual, topAnimes, proximaTemporada, nomeTemporada, temporadaDeHoje, sinopseEmPortugues } from "../mal.js";
 
@@ -38,7 +39,7 @@ montarCarrossel(document.getElementById("carrossel"), [
     fundoNitido: true,
     link: `post.html?id=${p.id}`,
     botoes: [{ href: `post.html?id=${p.id}`, texto: p.kind === "video" ? "Assistir vídeo" : "Ler agora", primario: true },
-             { href: "feed.html", texto: "Ver o feed" }],
+             ...(FEED_ATIVO ? [{ href: "feed.html", texto: "Ver o feed" }] : [])],
   })),
   ...destaquesTemporada.map((a, i) => ({
     chamada: i === 0 ? "Destaque da temporada" : "Nesta temporada",

@@ -3,7 +3,7 @@
 // avisos e a tag do anime favorito.
 // ============================================================
 
-import { NOME_DO_SITE, AUTOR_DO_SITE } from "./config.js";
+import { NOME_DO_SITE, AUTOR_DO_SITE, FEED_ATIVO } from "./config.js";
 import { usuarioAtual, lerPerfil, entrarComGoogle, sair, MODO_DEMO, nomeStatus, clienteSupabase } from "./store.js";
 
 /** Escapa texto vindo da API antes de inserir no HTML. */
@@ -102,7 +102,7 @@ export function toast(msg) {
 
 const LINKS = [
   { href: "index.html", texto: "Início" },
-  { href: "feed.html", texto: "Feed" },
+  ...(FEED_ATIVO ? [{ href: "feed.html", texto: "Feed" }] : []),
   { href: "buscar.html", texto: "Buscar" },
   { href: "sortear.html", texto: "O que assistir?" },
   { href: "comunidade.html", texto: "Comunidade" },
@@ -227,7 +227,7 @@ async function avisarPedidosAdmin(menu) {
   if (!db) return;
   const [pedidos, denuncias] = await Promise.all([
     db.rpc("pedidos_criador_pendentes").then((r) => (r.error ? 0 : r.data || 0)),
-    db.rpc("denuncias_abertas").then((r) => (r.error ? 0 : r.data || 0)),
+    FEED_ATIVO ? db.rpc("denuncias_abertas").then((r) => (r.error ? 0 : r.data || 0)) : 0,
   ]);
   const n = pedidos + denuncias;
   if (!n) return;

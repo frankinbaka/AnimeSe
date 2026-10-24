@@ -10,6 +10,7 @@ import {
   REDES, videoIncorporavel, contarPedidosCriador, pedidosCriador, criadoresAprovados, avaliarCriador, revogarCriador,
 } from "../perfis.js";
 import { contarDenunciasAbertas, denunciasParaAdmin, resolverDenuncias, MOTIVOS_DENUNCIA } from "../feed.js";
+import { FEED_ATIVO } from "../config.js";
 
 await montarLayout();
 
@@ -31,7 +32,8 @@ if (!usuario) {
     if (aba) abrirAba(aba.dataset.aba);
   });
   atualizarAlertaCriadores();
-  atualizarAlertaDenuncias();
+  if (FEED_ATIVO) atualizarAlertaDenuncias();
+  else abasEl.querySelector('[data-aba="denuncias"]')?.remove();
   const inicial = new URLSearchParams(location.search).get("aba") || "estatisticas";
   abrirAba(inicial);
 }
@@ -41,7 +43,7 @@ function abrirAba(nome) {
   history.replaceState(null, "", `admin.html?aba=${nome}`);
   if (nome === "publicacoes") mostrarPublicacoes();
   else if (nome === "criadores") mostrarCriadores();
-  else if (nome === "denuncias") mostrarDenuncias();
+  else if (nome === "denuncias" && FEED_ATIVO) mostrarDenuncias();
   else mostrarEstatisticas();
 }
 
@@ -203,7 +205,7 @@ async function mostrarPublicacoes() {
 
   alvo.innerHTML = `
     <div class="painel-admin-topo">
-      <p class="secao-descricao">${itens.length} ${itens.length === 1 ? "publicação" : "publicações"}. Publicadas vão para o feed como posts oficiais do AnimeSe. As marcadas com ★ também aparecem no carrossel da página inicial.</p>
+      <p class="secao-descricao">${itens.length} ${itens.length === 1 ? "publicação" : "publicações"}. ${FEED_ATIVO ? "Publicadas vão para o feed como posts oficiais do AnimeSe. " : ""}As marcadas com ★ aparecem no carrossel da página inicial.</p>
       <button class="btn btn-primario" id="btn-nova">Nova publicação</button>
     </div>
     ${itens.length ? `
@@ -597,7 +599,8 @@ async function mostrarDenuncias() {
     try {
       await resolverDenuncias(cartao.dataset.chave, remover);
       toast(remover ? "Publicação removida" : "Publicação mantida e denúncias arquivadas");
-      atualizarAlertaDenuncias();
+      if (FEED_ATIVO) atualizarAlertaDenuncias();
+  else abasEl.querySelector('[data-aba="denuncias"]')?.remove();
       mostrarDenuncias();
     } catch (err) {
       toast(err.message);
