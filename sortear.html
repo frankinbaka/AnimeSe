@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>O que assistir? — AnimeSe</title>
+  <meta name="description" content="Acompanhe os animes da temporada, busque qualquer anime e monte sua lista: assistindo, já assisti, pretendo assistir e dropei.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='16' fill='%23e2457a'/><text x='16' y='22' font-size='17' text-anchor='middle' fill='white'>ア</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header id="site-header"></header>
+  <main>
+    <section class="container">
+      <div class="sorteio-topo">
+        <h1>O que assistir?</h1>
+        <p class="secao-descricao">Marque os temas que você está a fim de ver e deixe o AnimeSe escolher um anime para você.</p>
+      </div>
+      <div class="sorteio" id="sorteio">
+        <form class="sorteio-filtros" id="filtros" aria-label="Filtros do sorteio">
+          <div id="grupos-generos"><p class="secao-descricao">Carregando temas…</p></div>
+
+          <fieldset class="filtro-linha">
+            <legend>Formato</legend>
+            <div class="segmentos" role="radiogroup">
+              <label><input type="radio" name="formato" value="series" checked> Séries</label>
+              <label><input type="radio" name="formato" value="filmes"> Filmes</label>
+              <label><input type="radio" name="formato" value="todos"> Tudo</label>
+            </div>
+          </fieldset>
+
+          <fieldset class="filtro-linha">
+            <legend>Nota mínima no MAL</legend>
+            <div class="segmentos" role="radiogroup">
+              <label><input type="radio" name="nota" value="0"> Qualquer</label>
+              <label><input type="radio" name="nota" value="7" checked> 7+</label>
+              <label><input type="radio" name="nota" value="8"> 8+</label>
+            </div>
+          </fieldset>
+
+          <label class="check"><input type="checkbox" id="esconder-lista" checked> Esconder animes que já estão na minha lista</label>
+          <label class="check"><input type="checkbox" id="so-comunidade"> Só animes sugeridos pela comunidade</label>
+
+          <div class="sorteio-acoes">
+            <button class="btn btn-primario btn-sortear" type="submit">Sortear anime</button>
+            <button class="btn-texto" type="button" id="limpar-filtros">Limpar temas</button>
+          </div>
+          <p class="secao-descricao" id="contagem" aria-live="polite"></p>
+        </form>
+
+        <section class="sorteio-resultado" id="resultado" aria-live="polite">
+          <div class="sorteio-vazio">
+            <span class="dado" aria-hidden="true">?</span>
+            <p>Escolha os temas e clique em <strong>Sortear anime</strong>.</p>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+  <footer id="site-footer"></footer>
+  <script type="module" src="js/paginas/sortear.js"></script>
+</body>
+</html>

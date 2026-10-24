@@ -276,3 +276,46 @@ export async function temporadasDoAnime(id) {
   gravarCache(chave, lista);
   return lista;
 }
+
+// ------------------------------------------------------------
+// Catálogo para o sorteio "O que assistir?" (função /api/catalogo)
+// ------------------------------------------------------------
+export const traduzirGenero = (nome) => GENEROS[nome] || nome;
+
+// Gêneros principais e público-alvo (o resto do MAL são "temas")
+const GENEROS_PRINCIPAIS = ["Action", "Adventure", "Comedy", "Drama", "Fantasy", "Horror", "Mystery", "Romance",
+  "Sci-Fi", "Slice of Life", "Sports", "Supernatural", "Suspense", "Award Winning", "Avant Garde",
+  "Boys Love", "Girls Love", "Gourmet", "Ecchi"];
+const PUBLICOS = ["Shounen", "Shoujo", "Seinen", "Josei", "Kids"];
+
+/** Grupo de um gênero já traduzido: "genero", "publico" ou "tema". */
+export function grupoDoGenero(nomeTraduzido) {
+  if (GENEROS_PRINCIPAIS.some((g) => traduzirGenero(g) === nomeTraduzido)) return "genero";
+  if (PUBLICOS.some((g) => traduzirGenero(g) === nomeTraduzido)) return "publico";
+  return "tema";
+}
+
+let catalogoEmMemoria = null;
+export async function catalogoParaSorteio() {
+  if (catalogoEmMemoria) return catalogoEmMemoria;
+  const emCache = lerCache("catalogo");
+  if (emCache) return (catalogoEmMemoria = emCache);
+
+  const resp = await fetch("/api/catalogo");
+  const json = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(json.erro || "Não foi possível carregar os animes para o sorteio.");
+
+  catalogoEmMemoria = (json.animes || []).map((a) => ({
+    id: a.id,
+    titulo: traduzirTitulo(a.t),
+    imagem: a.i,
+    nota: a.n,
+    generos: a.g.map(traduzirGenero),
+    tipo: TIPOS[a.f] ?? a.f,
+    formato: a.f,
+    episodios: a.e,
+    ano: a.a,
+  }));
+  gravarCache("catalogo", catalogoEmMemoria);
+  return catalogoEmMemoria;
+}

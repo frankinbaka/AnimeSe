@@ -100,6 +100,7 @@ export function toast(msg) {
 const LINKS = [
   { href: "index.html", texto: "Início" },
   { href: "buscar.html", texto: "Buscar" },
+  { href: "sortear.html", texto: "O que assistir?" },
   { href: "comunidade.html", texto: "Comunidade" },
   { href: "lista.html", texto: "Minha lista" },
 ];
