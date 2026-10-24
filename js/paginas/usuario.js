@@ -1,7 +1,7 @@
 // Perfil público de um usuário: lista, avaliações, comentários,
 // sugestões e, para criadores de conteúdo, redes e vídeos.
 import { montarLayout, esc, caixaErro, cardAnime, avatarHtml, nomeComTag, formatarNumero } from "../ui.js";
-import { usuarioAtual, STATUS } from "../store.js";
+import { usuarioAtual } from "../store.js";
 import { NOTAS, tempoAtras } from "../comunidade.js";
 import {
   perfilPublico, listaDoUsuario, avaliacoesDoUsuario, comentariosDoUsuario, sugestoesDoUsuario,
@@ -41,10 +41,12 @@ async function mostrar(p) {
   const redes = Object.keys(REDES).filter((r) => p[`${r}_url`]);
   const videos = (p.creator_videos || []).map(videoIncorporavel).filter(Boolean);
   const criador = p.is_creator && (redes.length || videos.length);
-  const assistidos = lista.filter((a) => a.status === "assistido").length;
+  // O perfil público mostra só os animes já assistidos
+  const assistidosLista = lista.filter((a) => a.status === "assistido");
+  const assistidos = assistidosLista.length;
 
   const abas = [
-    { id: "lista", nome: "Lista", total: lista.length },
+    { id: "lista", nome: "Assistidos", total: assistidos },
     { id: "avaliacoes", nome: "Avaliações", total: avaliacoes.length },
     { id: "comentarios", nome: "Comentários", total: comentarios.length },
     { id: "sugestoes", nome: "Sugestões", total: sugestoes.length },
@@ -76,8 +78,8 @@ async function mostrar(p) {
     </header>
 
     <ul class="perfil-numeros">
-      <li><strong>${formatarNumero(lista.length)}</strong><span>na lista</span></li>
       <li><strong>${formatarNumero(assistidos)}</strong><span>já assistidos</span></li>
+      <li><strong>${formatarNumero(comentarios.length)}</strong><span>comentários</span></li>
       <li><strong>${formatarNumero(avaliacoes.length)}</strong><span>avaliações</span></li>
       <li><strong>${formatarNumero(sugestoes.length)}</strong><span>sugestões</span></li>
     </ul>
@@ -93,21 +95,9 @@ async function mostrar(p) {
 
   const render = {
     lista() {
-      if (!lista.length) return (painel.innerHTML = vazio(`${pronome} ainda não adicionou animes à lista.`));
-      let filtro = "todos";
-      const desenhar = () => {
-        const itens = filtro === "todos" ? lista : lista.filter((a) => a.status === filtro);
-        painel.innerHTML = `
-          <div class="chips filtro-lista">
-            ${[{ id: "todos", nome: "Todos" }, ...STATUS].map((s) => {
-              const n = s.id === "todos" ? lista.length : lista.filter((a) => a.status === s.id).length;
-              return `<button type="button" class="chip" data-filtro="${s.id}" aria-pressed="${s.id === filtro}">${s.nome} ${n}</button>`;
-            }).join("")}
-          </div>
-          <div class="grade">${itens.map((a) => cardAnime(a, { status: a.status })).join("") || vazio("Nenhum anime com esse status.")}</div>`;
-        painel.querySelectorAll("[data-filtro]").forEach((b) => b.addEventListener("click", () => { filtro = b.dataset.filtro; desenhar(); }));
-      };
-      desenhar();
+      painel.innerHTML = assistidosLista.length
+        ? `<div class="grade">${assistidosLista.map((a) => cardAnime(a)).join("")}</div>`
+        : vazio(`${pronome} ainda não marcou nenhum anime como já assistido.`);
     },
     avaliacoes() {
       painel.innerHTML = avaliacoes.length ? `<div class="lista-avaliacoes">${avaliacoes.map((r) => `

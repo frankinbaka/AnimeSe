@@ -186,3 +186,13 @@ returns integer language sql stable security definer set search_path = public as
               else 0 end;
 $$;
 grant execute on function public.pedidos_criador_pendentes() to authenticated;
+
+
+-- ---------- Perfil público mostra só os animes já assistidos ----------
+-- Outras pessoas veem apenas os "Já assisti" de cada usuário; o próprio
+-- dono continua vendo a lista inteira (assistindo, pretendo, dropei).
+drop policy if exists "listas visiveis" on public.anime_list;
+drop policy if exists "ver propria lista" on public.anime_list;
+drop policy if exists "lista propria e assistidos visiveis" on public.anime_list;
+create policy "lista propria e assistidos visiveis" on public.anime_list
+  for select using (auth.uid() = user_id or status = 'assistido');
