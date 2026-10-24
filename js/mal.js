@@ -122,7 +122,7 @@ export function normalizar(a) {
 
   return {
     id: a.id,
-    titulo: ingles || a.title,
+    titulo: traduzirTitulo(ingles || a.title),
     tituloOriginal: a.title,
     tituloJapones: a.alternative_titles?.ja || null,
     imagem: a.main_picture?.large || a.main_picture?.medium || "",
@@ -145,6 +145,29 @@ export function normalizar(a) {
 }
 
 // Remove a linha "[Written by MAL Rewrite]" do fim das sinopses
+// Traduz os termos em inglês comuns nos títulos:
+// "Black Clover Season 2" → "Black Clover Temporada 2"
+const REGRAS_TITULO = [
+  [/\bThe Final Season\b/gi, "Temporada Final"],
+  [/\bFinal Season\b/gi, "Temporada Final"],
+  [/\b(\d+)(?:st|nd|rd|th) Season\b/gi, "Temporada $1"],
+  [/\bSeason (\d+)\b/gi, "Temporada $1"],
+  [/\bSeason ([IVX]+)\b/g, "Temporada $1"],
+  [/\b(\d+)(?:st|nd|rd|th) Cour\b/gi, "Parte $1"],
+  [/\bCour (\d+)\b/gi, "Parte $1"],
+  [/\bPart (\d+|[IVX]+)\b/gi, "Parte $1"],
+  [/\bThe Movie\b/gi, "O Filme"],
+  [/\bMovie\b/g, "Filme"],
+  [/\bSpecials\b/g, "Especiais"],
+  [/\bSpecial\b/g, "Especial"],
+  [/\bRecap\b/g, "Recapitulação"],
+  [/\bPrologue\b/g, "Prólogo"],
+];
+
+export function traduzirTitulo(titulo = "") {
+  return REGRAS_TITULO.reduce((t, [regra, troca]) => t.replace(regra, troca), titulo);
+}
+
 function limparSinopse(texto) {
   return (texto || "").replace(/\n*\[Written by [^\]]*\]\s*$/i, "").trim();
 }
@@ -215,3 +238,18 @@ export function nomeTemporada(season, ano) {
 
 /** Mantido por compatibilidade: a situação já vem traduzida em normalizar(). */
 export const traduzirStatus = (status) => status || "—";
+
+// ------------------------------------------------------------
+// Sinopse em português (função /api/traduzir, com cache)
+// ------------------------------------------------------------
+export async function sinopseEmPortugues(id) {
+  const chave = "pt:" + id;
+  const emCache = lerCache(chave);
+  if (emCache) return emCache;
+
+  const resp = await fetch(`/api/traduzir?id=${Number(id)}`);
+  const json = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(json.erro || "A tradução está indisponível no momento.");
+  gravarCache(chave, json.sinopse);
+  return json.sinopse;
+}

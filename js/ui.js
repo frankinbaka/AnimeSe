@@ -50,7 +50,7 @@ export function avatarHtml(url, nome = "?") {
 // Cards de anime
 // ------------------------------------------------------------
 
-export function cardAnime(a, { status = null } = {}) {
+export function cardAnime(a, { status = null, contagem = null } = {}) {
   const detalhes = [a.tipo, a.episodios ? `${a.episodios} ep.` : null].filter(Boolean).join(", ");
   return `
     <a class="card-anime" href="anime.html?id=${a.id}">
@@ -58,6 +58,7 @@ export function cardAnime(a, { status = null } = {}) {
         <img src="${esc(a.imagem)}" alt="" loading="lazy">
         ${a.nota ? `<span class="nota" aria-label="Nota ${formatarNota(a.nota)}">★ ${formatarNota(a.nota)}</span>` : ""}
         ${status ? `<span class="status-pill st-${status}">${nomeStatus(status)}</span>` : ""}
+        ${contagem ? `<span class="contagem" title="${contagem} ${contagem === 1 ? "pessoa sugeriu" : "pessoas sugeriram"}">${contagem} ${contagem === 1 ? "sugestão" : "sugestões"}</span>` : ""}
       </div>
       <h3>${esc(a.titulo)}</h3>
       ${detalhes ? `<p class="detalhe">${esc(detalhes)}</p>` : ""}
@@ -99,6 +100,7 @@ export function toast(msg) {
 const LINKS = [
   { href: "index.html", texto: "Início" },
   { href: "buscar.html", texto: "Buscar" },
+  { href: "comunidade.html", texto: "Comunidade" },
   { href: "lista.html", texto: "Minha lista" },
 ];
 

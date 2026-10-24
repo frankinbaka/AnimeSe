@@ -1,6 +1,7 @@
 // Página inicial: destaque da temporada, temporada atual, top e próximos.
+import { COMUNIDADE_ATIVA, animesSugeridos } from "../comunidade.js";
 import { montarLayout, cardAnime, esqueletos, caixaErro, esc, formatarNota, formatarNumero } from "../ui.js";
-import { temporadaAtual, topAnimes, proximaTemporada, nomeTemporada, temporadaDeHoje } from "../mal.js";
+import { temporadaAtual, topAnimes, proximaTemporada, nomeTemporada, temporadaDeHoje, sinopseEmPortugues } from "../mal.js";
 
 await montarLayout();
 
@@ -24,6 +25,21 @@ try {
 } catch (e) {
   grade.innerHTML = caixaErro(e.message);
   document.getElementById("hero-conteudo").innerHTML = `<div><h1>Temporada atual</h1><p class="hero-sinopse">${esc(e.message)}</p></div>`;
+}
+
+// Sugeridos pela comunidade (carrega em paralelo, vem do nosso banco)
+const faixaCom = document.getElementById("faixa-comunidade");
+if (!COMUNIDADE_ATIVA) {
+  document.getElementById("secao-comunidade").remove();
+} else {
+  faixaCom.innerHTML = esqueletos(6);
+  animesSugeridos(15)
+    .then((lista) => {
+      faixaCom.innerHTML = lista.length
+        ? lista.map((s) => cardAnime({ id: s.mal_id, titulo: s.anime_title, imagem: s.anime_image }, { contagem: s.total })).join("")
+        : `<p class="vazio" style="grid-column:1/-1">Nenhuma sugestão ainda. Abra um anime que você ama e clique em <strong>Sugerir para a comunidade</strong>.</p>`;
+    })
+    .catch(() => document.getElementById("secao-comunidade").remove());
 }
 
 try {
@@ -50,11 +66,17 @@ function montarHero(a) {
         ${a.estudios.length ? `<span>Estúdio <strong>${esc(a.estudios[0])}</strong></span>` : ""}
         ${a.membros ? `<span><strong>${formatarNumero(a.membros)}</strong> acompanhando no MAL</span>` : ""}
       </div>
-      <p class="hero-sinopse">${esc(a.sinopse || "")}</p>
+      <p class="hero-sinopse" id="hero-sinopse" aria-busy="true">Carregando sinopse…</p>
       <div class="hero-acoes">
         <a class="btn btn-primario" href="anime.html?id=${a.id}">Ver anime</a>
         <a class="btn btn-claro" href="buscar.html">Buscar outro</a>
       </div>
     </div>
     <img class="hero-poster" src="${esc(a.imagem)}" alt="Pôster de ${esc(a.titulo)}">`;
+
+  const alvo = document.getElementById("hero-sinopse");
+  sinopseEmPortugues(a.id)
+    .then((pt) => { alvo.textContent = pt || ""; })
+    .catch(() => { alvo.textContent = ""; })
+    .finally(() => alvo.removeAttribute("aria-busy"));
 }

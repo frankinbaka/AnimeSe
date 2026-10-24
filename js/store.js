@@ -24,6 +24,9 @@ if (!MODO_DEMO) {
   supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
+/** Cliente do Supabase para os outros módulos (null no modo demo). */
+export const clienteSupabase = () => supabase;
+
 // ------------------------------------------------------------
 // Modo demo (localStorage)
 // ------------------------------------------------------------
