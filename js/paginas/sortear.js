@@ -1,4 +1,4 @@
-// "O que assistir?": sorteia um anime de acordo com os temas marcados.
+// "O que assistir?": sorteia um anime de acordo com os gêneros marcados.
 import { montarLayout, esc, formatarNota, toast, entrar, caixaErro } from "../ui.js";
 import { catalogoParaSorteio, grupoDoGenero, sinopseEmPortugues, detalhes } from "../mal.js";
 import { usuarioAtual, lerLista, definirStatus } from "../store.js";
@@ -59,7 +59,8 @@ function montarTemas() {
       </div>
     </fieldset>` : "";
 
-  gruposEl.innerHTML = bloco("Gêneros", grupos.genero) + bloco("Temas", grupos.tema) + bloco("Público", grupos.publico);
+  // Só gêneros e público; os temas do MAL (Isekai, Escolar…) ficam de fora para não poluir
+  gruposEl.innerHTML = bloco("Gêneros", grupos.genero) + bloco("Público", grupos.publico);
 
   gruposEl.addEventListener("click", (e) => {
     const chip = e.target.closest(".chip");
@@ -117,9 +118,9 @@ function atualizarContagem() {
   const { lista, modo } = candidatos();
   if (!catalogo.length) return;
   contagem.textContent = !lista.length
-    ? "Nenhum anime combina com esses filtros. Desmarque alguns temas ou baixe a nota mínima."
+    ? "Nenhum anime combina com esses filtros. Desmarque alguns gêneros ou baixe a nota mínima."
     : modo === "algum"
-      ? `Nenhum anime tem todos esses temas juntos. Vamos sortear entre ${lista.length} que têm pelo menos um deles.`
+      ? `Nenhum anime tem todos esses gêneros juntos. Vamos sortear entre ${lista.length} que têm pelo menos um deles.`
       : `${lista.length} ${lista.length === 1 ? "anime combina" : "animes combinam"} com sua escolha.`;
 }
 

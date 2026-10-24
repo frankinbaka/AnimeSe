@@ -17,11 +17,11 @@
     <section class="container">
       <div class="sorteio-topo">
         <h1>O que assistir?</h1>
-        <p class="secao-descricao">Marque os temas que você está a fim de ver e deixe o AnimeSe escolher um anime para você.</p>
+        <p class="secao-descricao">Marque os gêneros que você está a fim de ver e deixe o AnimeSe escolher um anime para você.</p>
       </div>
       <div class="sorteio" id="sorteio">
         <form class="sorteio-filtros" id="filtros" aria-label="Filtros do sorteio">
-          <div id="grupos-generos"><p class="secao-descricao">Carregando temas…</p></div>
+          <div id="grupos-generos"><p class="secao-descricao">Carregando gêneros…</p></div>
 
           <fieldset class="filtro-linha">
             <legend>Formato</legend>
@@ -44,19 +44,21 @@
           <label class="check"><input type="checkbox" id="esconder-lista" checked> Esconder animes que já estão na minha lista</label>
           <label class="check"><input type="checkbox" id="so-comunidade"> Só animes sugeridos pela comunidade</label>
 
-          <div class="sorteio-acoes">
-            <button class="btn btn-primario btn-sortear" type="submit">Sortear anime</button>
-            <button class="btn-texto" type="button" id="limpar-filtros">Limpar temas</button>
-          </div>
-          <p class="secao-descricao" id="contagem" aria-live="polite"></p>
+          <button class="btn-texto" type="button" id="limpar-filtros">Limpar gêneros</button>
         </form>
 
-        <section class="sorteio-resultado" id="resultado" aria-live="polite">
-          <div class="sorteio-vazio">
-            <span class="dado" aria-hidden="true">?</span>
-            <p>Escolha os temas e clique em <strong>Sortear anime</strong>.</p>
+        <div class="sorteio-direita">
+          <section class="sorteio-resultado" id="resultado" aria-live="polite">
+            <div class="sorteio-vazio">
+              <span class="dado" aria-hidden="true">?</span>
+              <p>Escolha os gêneros e clique em <strong>Sortear anime</strong>.</p>
+            </div>
+          </section>
+          <div class="sorteio-acoes">
+            <button class="btn btn-primario btn-sortear" type="submit" form="filtros">Sortear anime</button>
+            <p class="secao-descricao" id="contagem" aria-live="polite"></p>
           </div>
-        </section>
+        </div>
       </div>
     </section>
   </main>

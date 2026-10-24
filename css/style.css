@@ -549,9 +549,11 @@ h3 { font-size: 1.05rem; }
 .segmentos input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
 .segmentos label:has(input:checked) { background: var(--tinta); color: #fff; }
 .segmentos label:has(input:focus-visible) { outline: 3px solid var(--sakura); outline-offset: -3px; }
-.sorteio-acoes { display: flex; align-items: center; gap: 16px; margin-top: 18px; }
+.sorteio-direita { display: grid; gap: 20px; }
+.sorteio-acoes { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+#limpar-filtros { margin-top: 14px; }
 .btn-sortear { font-size: 1.05rem; padding: 12px 26px; }
-#contagem { margin: 12px 0 0; }
+#contagem { margin: 0; }
 
 .sorteio-resultado { min-height: 360px; }
 .sorteio-vazio {
