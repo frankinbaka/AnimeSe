@@ -36,9 +36,12 @@ export function sugerirTag(titulo = "") {
 export const limparTag = (t = "") => t.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5);
 
 /** Nome do usuário com a tag ao lado. */
-export function nomeComTag(nick, tag, favorito = "") {
+export function nomeComTag(nick, tag, favorito = "", href = null) {
   const tagHtml = tag ? `<span class="tag-anime" title="Anime favorito: ${esc(favorito)}">${esc(tag)}</span>` : "";
-  return `<span class="nome-usuario">${esc(nick)}${tagHtml}</span>`;
+  // Com href, o nome vira link para o perfil público da pessoa
+  return href
+    ? `<a class="nome-usuario link-usuario" href="${esc(href)}">${esc(nick)}${tagHtml}</a>`
+    : `<span class="nome-usuario">${esc(nick)}${tagHtml}</span>`;
 }
 
 export function avatarHtml(url, nome = "?") {
@@ -196,7 +199,8 @@ async function montarMenuUsuario() {
       <span class="nome-curto">${nomeComTag(nick, perfil?.tag, perfil?.favoritoTitulo)}</span>
     </button>
     <div class="menu-dropdown" role="menu">
-      <a href="perfil.html" role="menuitem">Meu perfil</a>
+      <a href="usuario.html?id=${usuario.id}" role="menuitem">Meu perfil público</a>
+      <a href="perfil.html" role="menuitem">Editar perfil</a>
       <a href="lista.html" role="menuitem">Minha lista</a>
       ${perfil?.papel === "admin" ? `<a href="admin.html" role="menuitem">Painel admin</a>` : ""}
       <hr>

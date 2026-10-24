@@ -1,5 +1,6 @@
 // Comunidade: animes sugeridos pelos usuários e últimas avaliações.
 import { montarLayout, cardAnime, esqueletos, caixaErro, esc, nomeComTag, avatarHtml } from "../ui.js";
+import { linkPerfil } from "../perfis.js";
 import { COMUNIDADE_ATIVA, animesSugeridos, ultimasAvaliacoes, nomeAutor, tempoAtras, NOTAS } from "../comunidade.js";
 
 await montarLayout();
@@ -32,7 +33,7 @@ if (!COMUNIDADE_ATIVA) {
             <a href="anime.html?id=${r.mal_id}" class="miniatura"><img src="${esc(r.anime_image)}" alt="" loading="lazy"></a>
             <div class="linha-autor">
               <a class="titulo-anime" href="anime.html?id=${r.mal_id}">${esc(r.anime_title)}</a>
-              <span class="por">${avatarHtml(r.autor?.avatar_url, nomeAutor(r.autor))}${nomeComTag(nomeAutor(r.autor), r.autor?.tag, r.autor?.favorite_title)}</span>
+              <span class="por">${avatarHtml(r.autor?.avatar_url, nomeAutor(r.autor))}${nomeComTag(nomeAutor(r.autor), r.autor?.tag, r.autor?.favorite_title, linkPerfil(r.autor))}</span>
               <span class="data">${tempoAtras(r.created_at)}${r.likes ? `, ♥ ${r.likes}` : ""}</span>
             </div>
             <span class="nota-grande" title="${NOTAS[r.score]}">★ ${r.score}<small>/10</small></span>

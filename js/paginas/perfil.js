@@ -5,6 +5,7 @@ import {
 } from "../ui.js";
 import { usuarioAtual, lerPerfil, salvarPerfil, lerLista } from "../store.js";
 import { buscar } from "../mal.js";
+import { REDES, normalizarLinkRede, videoIncorporavel } from "../perfis.js";
 
 await montarLayout();
 
@@ -47,6 +48,7 @@ function montar(perfil, lista) {
       <div>
         <div id="previa-nome"></div>
         <p>${lista.length} ${lista.length === 1 ? "anime" : "animes"} na lista, ${assistidos} ${assistidos === 1 ? "já assistido" : "já assistidos"}</p>
+        <a class="link-perfil-publico" href="usuario.html?id=${usuario.id}">Ver meu perfil público</a>
       </div>
     </div>
 
@@ -75,8 +77,48 @@ function montar(perfil, lista) {
         <p class="ajuda">Aparece ao lado do seu nick. Até 5 letras ou números. Sugerimos as iniciais do anime, mas você pode mudar (ex.: FMAB, JJK, AOT).</p>
       </div>
 
+      <div class="campo">
+        <label for="campo-bio">Sobre mim <span class="opcional">(opcional)</span></label>
+        <textarea id="campo-bio" maxlength="300" rows="3" placeholder="Ex.: Fã de isekai e shounen, assistindo tudo da temporada.">${esc(perfil.bio || "")}</textarea>
+      </div>
+
+      <fieldset class="bloco-criador">
+        <label class="check check-destaque"><input type="checkbox" id="campo-criador" ${perfil.criador ? "checked" : ""}>
+          <span><strong>Sou criador de conteúdo</strong><br><span class="opcional">Mostre seus canais e vídeos numa aba própria do seu perfil.</span></span>
+        </label>
+        <div id="campos-criador" ${perfil.criador ? "" : "hidden"}>
+          ${Object.entries(REDES).map(([id, r]) => `
+            <div class="campo">
+              <label for="rede-${id}">${r.nome}</label>
+              <input id="rede-${id}" type="url" inputmode="url" value="${esc(perfil[id] || "")}" placeholder="${r.exemplo}">
+              <p class="erro" id="erro-rede-${id}" hidden>Esse link não é do ${r.nome}.</p>
+            </div>`).join("")}
+          <div class="campo">
+            <label for="campo-videos">Vídeos em destaque <span class="opcional">(até 12, um link por linha)</span></label>
+            <textarea id="campo-videos" rows="5" placeholder="https://youtube.com/watch?v=...\nhttps://www.tiktok.com/@voce/video/123...\nhttps://www.instagram.com/reel/...">${esc((perfil.videos || []).join("\n"))}</textarea>
+            <p class="ajuda">Aceita vídeos do YouTube (inclusive Shorts), TikTok e Instagram (reels e posts). No TikTok, use o link completo do vídeo, aquele com <code>/video/</code> e números; o link curto do app não funciona.</p>
+            <ul class="validacao-videos" id="validacao-videos"></ul>
+          </div>
+        </div>
+      </fieldset>
+
       <button class="btn btn-primario" type="submit" id="btn-salvar">Salvar perfil</button>
     </form>`;
+
+  // Criador de conteúdo: mostra/esconde os campos e confere os links de vídeo
+  const caixaCriador = alvo.querySelector("#campo-criador");
+  caixaCriador.addEventListener("change", () => { alvo.querySelector("#campos-criador").hidden = !caixaCriador.checked; });
+  const campoVideos = alvo.querySelector("#campo-videos");
+  const conferirVideos = () => {
+    const linhas = campoVideos.value.split("\n").map((l) => l.trim()).filter(Boolean);
+    alvo.querySelector("#validacao-videos").innerHTML = linhas.map((l) => {
+      const v = videoIncorporavel(l);
+      return `<li class="${v ? "ok" : "falha"}">${v ? `✓ ${REDES[v.rede].nome}` : "✗ Link não reconhecido"}: ${esc(l.length > 60 ? l.slice(0, 57) + "…" : l)}</li>`;
+    }).join("") + (linhas.length > 12 ? `<li class="falha">✗ Só os 12 primeiros vídeos serão salvos.</li>` : "");
+    return linhas;
+  };
+  campoVideos.addEventListener("input", conferirVideos);
+  conferirVideos();
 
   const campoNick = alvo.querySelector("#campo-nick");
   const campoTag = alvo.querySelector("#campo-tag");
@@ -171,7 +213,25 @@ function montar(perfil, lista) {
     const botao = alvo.querySelector("#btn-salvar");
     botao.disabled = true;
     try {
+      // Campos de criador de conteúdo
+      const criador = caixaCriador.checked;
+      const redes = {};
+      for (const id of Object.keys(REDES)) {
+        const campo = alvo.querySelector(`#rede-${id}`);
+        const { ok, valor } = normalizarLinkRede(id, campo.value);
+        alvo.querySelector(`#erro-rede-${id}`).hidden = ok || !criador;
+        if (criador && !ok) { campo.focus(); throw new Error(`O link do ${REDES[id].nome} parece errado.`); }
+        redes[id] = valor;
+        campo.value = valor;
+      }
+      const videos = conferirVideos().filter((l) => videoIncorporavel(l)).slice(0, 12);
+      if (criador && !Object.values(redes).some(Boolean) && !videos.length) {
+        throw new Error("Como criador, adicione pelo menos um canal ou vídeo.");
+      }
+
       await salvarPerfil({
+        bio: alvo.querySelector("#campo-bio").value,
+        criador, ...redes, videos,
         nick: estado.nick, tag: estado.tag,
         favoritoId: estado.favoritoId, favoritoTitulo: estado.favoritoTitulo, favoritoImagem: estado.favoritoImagem,
       });

@@ -4,6 +4,7 @@
 import { montarLayout, caixaErro, esc, formatarNota, formatarNumero, toast, entrar, nomeComTag, avatarHtml } from "../ui.js";
 import { detalhes, traduzirStatus, nomeTemporada, sinopseEmPortugues, temporadasDoAnime } from "../mal.js";
 import { usuarioAtual, statusNaLista, definirStatus, removerDaLista, STATUS, nomeStatus } from "../store.js";
+import { linkPerfil } from "../perfis.js";
 import {
   COMUNIDADE_ATIVA, NOTAS, nomeAutor, tempoAtras, estatisticas, avaliacoesDoAnime, salvarAvaliacao,
   excluirAvaliacao, meusLikes, curtir, descurtir, responder, excluirResposta,
@@ -232,7 +233,7 @@ async function montarSugestoes(anime, notasPorUsuario = null) {
             ${avatarHtml(s.autor?.avatar_url, nomeAutor(s.autor))}
             <div>
               <div class="linha-autor">
-                ${nomeComTag(nomeAutor(s.autor), s.autor?.tag, s.autor?.favorite_title)}
+                ${nomeComTag(nomeAutor(s.autor), s.autor?.tag, s.autor?.favorite_title, linkPerfil(s.autor))}
                 ${notas[s.user_id] ? `<span class="nota-usuario" title="Nota que deu ao anime">★ ${notas[s.user_id]}/10</span>` : ""}
                 <span class="data">${tempoAtras(s.created_at)}</span>
               </div>
@@ -384,7 +385,7 @@ function cartaoAvaliacao(r, curtidas) {
       <header>
         ${avatarHtml(r.autor?.avatar_url, nome)}
         <div class="linha-autor">
-          ${nomeComTag(nome, r.autor?.tag, r.autor?.favorite_title)}
+          ${nomeComTag(nome, r.autor?.tag, r.autor?.favorite_title, linkPerfil(r.autor))}
           ${minha ? `<span class="selo-voce">você</span>` : ""}
           <span class="data">${tempoAtras(r.created_at)}${r.updated_at && r.updated_at !== r.created_at && new Date(r.updated_at) - new Date(r.created_at) > 60000 ? " (editada)" : ""}</span>
         </div>
@@ -409,7 +410,7 @@ function cartaoAvaliacao(r, curtidas) {
               ${avatarHtml(resp.autor?.avatar_url, nomeAutor(resp.autor))}
               <div>
                 <div class="linha-autor">
-                  ${nomeComTag(nomeAutor(resp.autor), resp.autor?.tag, resp.autor?.favorite_title)}
+                  ${nomeComTag(nomeAutor(resp.autor), resp.autor?.tag, resp.autor?.favorite_title, linkPerfil(resp.autor))}
                   <span class="data">${tempoAtras(resp.created_at)}</span>
                   ${usuario && resp.user_id === usuario.id ? `<button class="btn-texto perigo" type="button" data-acao="excluir-resposta">Excluir</button>` : ""}
                 </div>

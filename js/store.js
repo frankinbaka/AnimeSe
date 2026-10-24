@@ -96,7 +96,7 @@ export async function lerPerfil() {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("nickname, tag, favorite_mal_id, favorite_title, favorite_image, avatar_url, role")
+    .select("*")
     .eq("id", u.id)
     .maybeSingle();
   if (error) throw error;
@@ -109,6 +109,12 @@ export async function lerPerfil() {
     favoritoImagem: data?.favorite_image || "",
     avatar: data?.avatar_url || u.avatar,
     papel: data?.role || "user",
+    bio: data?.bio || "",
+    criador: Boolean(data?.is_creator),
+    youtube: data?.youtube_url || "",
+    tiktok: data?.tiktok_url || "",
+    instagram: data?.instagram_url || "",
+    videos: Array.isArray(data?.creator_videos) ? data.creator_videos : [],
   };
 }
 
@@ -129,6 +135,15 @@ export async function salvarPerfil(perfil) {
     favorite_title: perfil.favoritoTitulo || null,
     favorite_image: perfil.favoritoImagem || null,
     updated_at: new Date().toISOString(),
+    // Campos do perfil público (etapa 4), enviados só quando o formulário os tem
+    ...("criador" in perfil && {
+      bio: perfil.bio?.trim() || null,
+      is_creator: Boolean(perfil.criador),
+      youtube_url: perfil.criador ? perfil.youtube || null : null,
+      tiktok_url: perfil.criador ? perfil.tiktok || null : null,
+      instagram_url: perfil.criador ? perfil.instagram || null : null,
+      creator_videos: perfil.criador ? perfil.videos || [] : [],
+    }),
   });
   if (error) {
     if (error.code === "23505") throw new Error("Esse nick já está em uso. Escolha outro.");

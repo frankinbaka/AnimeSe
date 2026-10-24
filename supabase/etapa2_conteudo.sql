@@ -190,7 +190,7 @@ begin
     ), '[]'::jsonb),
     'ultimos_usuarios', coalesce((
       select jsonb_agg(x) from (
-        select nickname, display_name, avatar_url, tag, created_at from profiles order by created_at desc limit 8
+        select id, nickname, display_name, avatar_url, tag, created_at from profiles order by created_at desc limit 8
       ) x
     ), '[]'::jsonb),
     'publicacoes', jsonb_build_object(

@@ -105,7 +105,7 @@ async function mostrarEstatisticas() {
         <ul class="lista-usuarios">
           ${e.ultimos_usuarios.map((u) => {
             const nome = u.nickname || u.display_name?.split(" ")[0] || "Usuário";
-            return `<li>${avatarHtml(u.avatar_url, nome)}<span>${nomeComTag(nome, u.tag)}</span><span class="data">${formatarData(u.created_at)}</span></li>`;
+            return `<li>${avatarHtml(u.avatar_url, nome)}<span>${nomeComTag(nome, u.tag, "", u.id ? `usuario.html?id=${u.id}` : null)}</span><span class="data">${formatarData(u.created_at)}</span></li>`;
           }).join("") || "<li>Ninguém se cadastrou ainda.</li>"}
         </ul>
       </section>
