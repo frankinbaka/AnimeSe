@@ -108,7 +108,8 @@ export function videoIncorporavel(url = "") {
   let m = u.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([\w-]{11})/);
   if (m) return { rede: "youtube", embed: `https://www.youtube-nocookie.com/embed/${m[1]}`, vertical: /shorts\//.test(u), url: u };
   m = u.match(/tiktok\.com\/@[\w.-]+\/video\/(\d+)/) || u.match(/tiktok\.com\/(?:embed\/v2|v)\/(\d+)/);
-  if (m) return { rede: "tiktok", embed: `https://www.tiktok.com/embed/v2/${m[1]}`, vertical: true, url: u };
+  // Player oficial do TikTok: mostra só o vídeo, sem o cartão com legenda e botões do app
+  if (m) return { rede: "tiktok", embed: `https://www.tiktok.com/player/v1/${m[1]}?description=0&music_info=0&rel=0&loop=1`, vertical: true, url: u };
   m = u.match(/instagram\.com\/(p|reel|reels|tv)\/([\w-]+)/);
   if (m) return { rede: "instagram", embed: `https://www.instagram.com/${m[1] === "reels" ? "reel" : m[1]}/${m[2]}/embed`, vertical: m[1] !== "p", url: u };
   return null;
