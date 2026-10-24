@@ -577,13 +577,21 @@ h3 { font-size: 1.05rem; }
 .sorteado-meta strong { color: var(--sakura-escuro); }
 .genero-marcado { background: var(--tinta); color: #fff; border-color: var(--tinta); }
 .sorteado-sinopse { white-space: pre-line; max-width: 65ch; display: -webkit-box; -webkit-line-clamp: 7; -webkit-box-orient: vertical; overflow: hidden; }
-.sorteado-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 8px; }
+/* Botões ocupam a largura toda do cartão, em duas colunas iguais */
+.sorteado-acoes {
+  grid-column: 1 / -1;
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+  padding-top: 16px; border-top: 1px solid var(--borda);
+}
+.sorteado-acoes .btn { width: 100%; padding: 12px 16px; }
+.sorteado-link { grid-column: 1 / -1; text-align: center; margin: -8px 0 0; }
 
 @media (max-width: 960px) {
   .sorteio { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
   .sorteado { grid-template-columns: 1fr; }
+  .sorteado-acoes { grid-template-columns: 1fr; }
   .sorteado-capa img { max-width: 180px; }
 }
 /* Menu com 5 itens: nunca quebra linha; em telas médias a busca rápida
@@ -627,6 +635,7 @@ h3 { font-size: 1.05rem; }
   /* O que assistir? */
   .sorteio-topo { text-align: center; }
   .sorteado { justify-items: center; text-align: center; }
-  .sorteado .generos, .sorteado-acoes { justify-content: center; }
+  .sorteado .generos { justify-content: center; }
+  .sorteado-acoes { width: 100%; }
   .sorteado-sinopse { text-align: left; }
 }

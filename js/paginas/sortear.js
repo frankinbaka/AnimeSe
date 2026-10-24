@@ -176,14 +176,14 @@ function mostrar(a) {
         <p class="sorteado-meta">${a.nota ? `<strong>★ ${formatarNota(a.nota)}</strong> no MAL, ` : ""}${esc(info)}</p>
         <div class="generos">${a.generos.map((g) => `<span class="genero ${selecionados.has(g) ? "genero-marcado" : ""}">${esc(g)}</span>`).join("")}</div>
         <p class="sorteado-sinopse" id="sorteado-sinopse">Carregando sinopse…</p>
-        <div class="sorteado-acoes">
-          <button class="btn btn-primario" type="button" data-acao="pretendo">Quero assistir</button>
-          <button class="btn btn-contorno" type="button" data-acao="assistido">Já assisti, sortear outro</button>
-          <button class="btn btn-contorno" type="button" data-acao="outro">Não curti, sortear outro</button>
-          <button class="btn btn-contorno" type="button" data-acao="pretendo-proximo">Pretendo assistir, sortear outro</button>
-        </div>
-        <p><a href="anime.html?id=${a.id}">Ver página completa do anime</a></p>
       </div>
+      <div class="sorteado-acoes">
+        <button class="btn btn-primario" type="button" data-acao="pretendo">Quero assistir</button>
+        <button class="btn btn-contorno" type="button" data-acao="pretendo-proximo">Pretendo assistir, sortear outro</button>
+        <button class="btn btn-contorno" type="button" data-acao="assistido">Já assisti, sortear outro</button>
+        <button class="btn btn-contorno" type="button" data-acao="outro">Não curti, sortear outro</button>
+      </div>
+      <p class="sorteado-link"><a href="anime.html?id=${a.id}">Ver página completa do anime</a></p>
     </article>`;
 
   const sinopse = resultado.querySelector("#sorteado-sinopse");
