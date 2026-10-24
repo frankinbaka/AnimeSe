@@ -519,3 +519,14 @@ h3 { font-size: 1.05rem; }
 @media (max-width: 860px) {
   .anime-coluna-esquerda .poster-grande { max-width: 200px; }
 }
+
+/* Em telas largas, a franquia vai para a margem livre à esquerda da página */
+@media (min-width: 1780px) {
+  .anime-topo { position: relative; }
+  .anime-coluna-esquerda .temporadas {
+    position: absolute;
+    top: 32px;
+    right: calc(100% + 32px);
+    width: 260px;
+  }
+}
