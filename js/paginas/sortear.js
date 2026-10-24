@@ -16,21 +16,31 @@ const selecionados = new Set();
 const jaSorteados = new Set(); // evita repetir na mesma visita
 let catalogo = [];
 let naMinhaLista = new Set();
+let minhaLista = [];
 let sugeridosComunidade = null; // carregado só quando a opção é marcada
+let meusPretendo = null; // idem
+
+const caixaEsconder = document.getElementById("esconder-lista");
+const caixaPretendo = document.getElementById("so-pretendo");
+const caixaComunidade = document.getElementById("so-comunidade");
 
 if (!usuario) {
-  const esconder = document.getElementById("esconder-lista");
-  esconder.checked = false;
-  esconder.disabled = true;
-  esconder.parentElement.title = "Entre com sua conta para usar esta opção";
+  for (const caixa of [caixaEsconder, caixaPretendo]) {
+    caixa.checked = false;
+    caixa.disabled = true;
+    caixa.parentElement.title = "Entre com sua conta para usar esta opção";
+  }
 }
 if (!COMUNIDADE_ATIVA) document.getElementById("so-comunidade").parentElement.remove();
 
 try {
   [catalogo, naMinhaLista] = await Promise.all([
     catalogoParaSorteio(),
-    usuario ? lerLista().then((l) => new Set(l.map((a) => a.id))).catch(() => new Set()) : new Set(),
-  ]);
+    usuario ? lerLista().catch(() => []) : [],
+  ]).then(([cat, lista]) => {
+    minhaLista = lista;
+    return [cat, new Set(lista.map((a) => a.id))];
+  });
   montarTemas();
   atualizarContagem();
 } catch (e) {
@@ -79,7 +89,14 @@ document.getElementById("limpar-filtros").addEventListener("click", () => {
   atualizarContagem();
 });
 form.addEventListener("change", async (e) => {
-  if (e.target.id === "so-comunidade" && e.target.checked && !sugeridosComunidade) await carregarComunidade();
+  // "Pretendo assistir" e "comunidade" são fontes diferentes: uma desmarca a outra
+  if (e.target === caixaPretendo && caixaPretendo.checked && caixaComunidade) caixaComunidade.checked = false;
+  if (e.target === caixaComunidade && caixaComunidade.checked) caixaPretendo.checked = false;
+  // Sorteando da própria lista, não faz sentido esconder os animes da lista
+  caixaEsconder.disabled = !usuario || caixaPretendo.checked;
+
+  if (caixaPretendo.checked && !meusPretendo) await carregarPretendo();
+  if (caixaComunidade?.checked && !sugeridosComunidade) await carregarComunidade();
   atualizarContagem();
 });
 
@@ -91,14 +108,16 @@ function opcoes() {
   return {
     formato: dados.get("formato"),
     notaMinima: Number(dados.get("nota")),
-    esconderLista: document.getElementById("esconder-lista")?.checked,
-    soComunidade: document.getElementById("so-comunidade")?.checked,
+    esconderLista: caixaEsconder.checked && !caixaPretendo.checked,
+    soPretendo: caixaPretendo.checked,
+    soComunidade: caixaComunidade?.checked,
   };
 }
 
 function candidatos() {
   const o = opcoes();
-  const base = (o.soComunidade && sugeridosComunidade ? sugeridosComunidade : catalogo).filter((a) => {
+  const fonte = o.soPretendo ? meusPretendo || [] : o.soComunidade && sugeridosComunidade ? sugeridosComunidade : catalogo;
+  const base = fonte.filter((a) => {
     if (o.formato === "series" && !["Série", "ONA"].includes(a.tipo)) return false;
     if (o.formato === "filmes" && a.tipo !== "Filme") return false;
     if (o.notaMinima && (a.nota || 0) < o.notaMinima) return false;
@@ -117,11 +136,32 @@ function candidatos() {
 function atualizarContagem() {
   const { lista, modo } = candidatos();
   if (!catalogo.length) return;
-  contagem.textContent = !lista.length
+  const o = opcoes();
+  contagem.textContent = o.soPretendo && !(meusPretendo || []).length
+    ? "Sua lista \"Pretendo assistir\" está vazia. Marque animes como Pretendo assistir para sortear entre eles."
+    : !lista.length
     ? "Nenhum anime combina com esses filtros. Desmarque alguns gêneros ou baixe a nota mínima."
     : modo === "algum"
       ? `Nenhum anime tem todos esses gêneros juntos. Vamos sortear entre ${lista.length} que têm pelo menos um deles.`
       : `${lista.length} ${lista.length === 1 ? "anime combina" : "animes combinam"} com sua escolha.`;
+}
+
+/** Animes da minha lista com status "Pretendo assistir", com gêneros do catálogo. */
+async function carregarPretendo() {
+  contagem.textContent = "Carregando sua lista…";
+  try {
+    minhaLista = await lerLista();
+    naMinhaLista = new Set(minhaLista.map((a) => a.id));
+    const porId = new Map(catalogo.map((a) => [a.id, a]));
+    const pretendo = minhaLista.filter((a) => a.status === "pretendo");
+    const faltando = pretendo.filter((a) => !porId.has(a.id)).slice(0, 40);
+    // Animes fora do catálogo popular: busca os detalhes (gêneros, nota)
+    const extras = (await Promise.all(faltando.map((a) => detalhes(a.id).catch(() => null)))).filter(Boolean);
+    meusPretendo = [...pretendo.map((a) => porId.get(a.id)).filter(Boolean), ...extras];
+  } catch (e) {
+    meusPretendo = [];
+    toast(e.message);
+  }
 }
 
 async function carregarComunidade() {
@@ -177,7 +217,7 @@ function mostrar(a) {
         <div class="generos">${a.generos.map((g) => `<span class="genero ${selecionados.has(g) ? "genero-marcado" : ""}">${esc(g)}</span>`).join("")}</div>
         <p class="sorteado-sinopse" id="sorteado-sinopse">Carregando sinopse…</p>
         <div class="sorteado-acoes">
-          <button class="btn btn-primario" type="button" data-acao="pretendo">Quero assistir</button>
+          ${opcoes().soPretendo ? "" : `<button class="btn btn-primario" type="button" data-acao="pretendo">Quero assistir</button>`}
           <button class="btn btn-contorno" type="button" data-acao="assistido">Já assisti, sortear outro</button>
           <button class="btn btn-contorno" type="button" data-acao="outro">Não curti, sortear outro</button>
         </div>
@@ -207,8 +247,12 @@ async function agir(acao, anime, botao) {
   try {
     await definirStatus(anime, acao); // "assistido" ou "pretendo"
     naMinhaLista.add(anime.id);
+    // Saiu do "Pretendo assistir": não deve mais ser sorteado dali
+    if (acao === "assistido" && meusPretendo) meusPretendo = meusPretendo.filter((a) => a.id !== anime.id);
+    if (acao === "pretendo" && meusPretendo && !meusPretendo.some((a) => a.id === anime.id)) meusPretendo.push(anime);
     if (acao === "assistido") {
       toast(`"${anime.titulo}" foi para a sua lista como Já assisti`);
+      atualizarContagem();
       sortear();
     } else {
       toast(`"${anime.titulo}" foi para a sua lista como Pretendo assistir`);
