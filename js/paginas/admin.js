@@ -65,12 +65,12 @@ async function mostrarEstatisticas() {
     <section class="tiles" aria-label="Resumo">
       ${tile("Usuários cadastrados", n(e.usuarios.total), `+${n(e.usuarios.dias7)} nos últimos 7 dias`)}
       ${tile("Visitas hoje", n(e.visitas.hoje))}
-      ${tile("Visitas em 7 dias", n(e.visitas.dias7), `${n(e.visitas.unicos7)} visitantes únicos`)}
-      ${tile("Visitas em 30 dias", n(e.visitas.dias30), `${n(e.visitas.unicos30)} visitantes únicos`)}
-      ${tile("Avaliações", n(e.comunidade.avaliacoes), `${n(e.comunidade.respostas)} respostas, ${n(e.comunidade.likes)} likes`)}
+      ${tile("Visitas em 7 dias", n(e.visitas.dias7), `${n(e.visitas.unicos7)} ${e.visitas.unicos7 === 1 ? "visitante único" : "visitantes únicos"}`)}
+      ${tile("Visitas em 30 dias", n(e.visitas.dias30), `${n(e.visitas.unicos30)} ${e.visitas.unicos30 === 1 ? "visitante único" : "visitantes únicos"}`)}
+      ${tile("Avaliações", n(e.comunidade.avaliacoes), `${n(e.comunidade.respostas)} ${e.comunidade.respostas === 1 ? "resposta" : "respostas"}, ${n(e.comunidade.likes)} ${e.comunidade.likes === 1 ? "like" : "likes"}`)}
       ${tile("Sugestões da comunidade", n(e.comunidade.sugestoes))}
       ${tile("Animes nas listas", n(e.listas.total), `${n(e.listas.assistido)} já assistidos`)}
-      ${tile("Publicações", n(e.publicacoes.publicadas), `${n(e.publicacoes.rascunhos)} rascunhos`)}
+      ${tile("Publicações", n(e.publicacoes.publicadas), `${n(e.publicacoes.rascunhos)} ${e.publicacoes.rascunhos === 1 ? "rascunho" : "rascunhos"}`)}
     </section>
 
     <section class="painel-admin">
