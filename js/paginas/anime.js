@@ -2,7 +2,7 @@
 // da comunidade (nota 1–10 + comentário, respostas e likes) e
 // sugestões de quem recomenda o anime.
 import { montarLayout, caixaErro, esc, formatarNota, formatarNumero, toast, entrar, nomeComTag, avatarHtml } from "../ui.js";
-import { detalhes, traduzirStatus, nomeTemporada, sinopseEmPortugues } from "../mal.js";
+import { detalhes, traduzirStatus, nomeTemporada, sinopseEmPortugues, temporadasDoAnime } from "../mal.js";
 import { usuarioAtual, statusNaLista, definirStatus, removerDaLista, STATUS, nomeStatus } from "../store.js";
 import {
   COMUNIDADE_ATIVA, NOTAS, nomeAutor, tempoAtras, estatisticas, avaliacoesDoAnime, salvarAvaliacao,
@@ -24,6 +24,7 @@ if (!id || !/^\d+$/.test(id)) {
     document.title = `${anime.titulo} — AnimeSe`;
     alvo.innerHTML = montarPagina(anime);
     carregarSinopse(anime);
+    carregarTemporadas(anime);
     await montarPainelLista(anime);
     if (COMUNIDADE_ATIVA) montarAvaliacoes(anime); // carrega também as sugestões
   } catch (e) {
@@ -64,6 +65,7 @@ function montarPagina(a) {
         </p>
         <p><a href="${esc(a.urlMal)}" target="_blank" rel="noopener">Ver no MyAnimeList</a></p>
       </div>
+      <aside class="temporadas" id="temporadas" aria-labelledby="titulo-temporadas" hidden></aside>
     </div>
     ${COMUNIDADE_ATIVA ? `
       <section class="secao" id="secao-sugestoes" aria-labelledby="titulo-sugestoes"></section>
@@ -85,6 +87,56 @@ async function carregarSinopse(anime) {
   } finally {
     el.removeAttribute("aria-busy");
   }
+}
+
+// ------------------------------------------------------------
+// Outras temporadas da mesma franquia
+// ------------------------------------------------------------
+async function carregarTemporadas(anime) {
+  const caixa = document.getElementById("temporadas");
+  let lista;
+  try {
+    lista = await temporadasDoAnime(anime.id);
+  } catch {
+    return; // sem a lista, a página continua normal
+  }
+  if (lista.length < 2) return; // anime sem continuações, filmes ou OVAs
+
+  // Separa por formato, mantendo a ordem de estreia dentro de cada grupo
+  const grupos = [
+    { titulo: "Temporadas", itens: lista.filter((t) => ["Série", "ONA"].includes(t.tipo)) },
+    { titulo: "Filmes", itens: lista.filter((t) => t.tipo === "Filme") },
+    { titulo: "OVAs e especiais", itens: lista.filter((t) => !["Série", "ONA", "Filme"].includes(t.tipo)) },
+  ].filter((g) => g.itens.length);
+
+  const item = (t, ordem) => {
+    const atual = t.id === anime.id;
+    const detalhes = [t.tipo, t.episodios ? `${t.episodios} ep.` : null, t.ano || (t.emBreve ? "Em breve" : null)].filter(Boolean).join(", ");
+    return `
+      <li>
+        <a href="anime.html?id=${t.id}" ${atual ? 'aria-current="page"' : ""}>
+          <span class="ordem" aria-hidden="true">${ordem}</span>
+          ${t.imagem ? `<img src="${esc(t.imagem)}" alt="" loading="lazy">` : `<span class="sem-capa"></span>`}
+          <span class="info">
+            <strong>${esc(t.titulo)}</strong>
+            <span>${esc(detalhes)}</span>
+            ${atual ? `<span class="voce-esta-aqui">Você está aqui</span>` : ""}
+          </span>
+        </a>
+      </li>`;
+  };
+
+  caixa.innerHTML = `
+    <h2 id="titulo-temporadas">Temporadas, filmes e OVAs</h2>
+    <p class="secao-descricao">${lista.length} títulos desta franquia, em ordem de estreia.</p>
+    <div class="grupos-temporadas">
+      ${grupos.map((g) => `
+        <section>
+          <h3>${g.titulo} <span class="contador">${g.itens.length}</span></h3>
+          <ol class="lista-temporadas">${g.itens.map((t, i) => item(t, i + 1)).join("")}</ol>
+        </section>`).join("")}
+    </div>`;
+  caixa.hidden = false;
 }
 
 // ------------------------------------------------------------

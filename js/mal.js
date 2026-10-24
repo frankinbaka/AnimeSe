@@ -253,3 +253,26 @@ export async function sinopseEmPortugues(id) {
   gravarCache(chave, json.sinopse);
   return json.sinopse;
 }
+
+// ------------------------------------------------------------
+// Temporadas da mesma franquia (função /api/temporadas)
+// ------------------------------------------------------------
+export async function temporadasDoAnime(id) {
+  const chave = "temporadas:" + id;
+  const emCache = lerCache(chave);
+  if (emCache) return emCache;
+
+  const resp = await fetch(`/api/temporadas?id=${Number(id)}`);
+  const json = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(json.erro || "Não foi possível buscar as temporadas.");
+
+  const lista = (json.temporadas || []).map((t) => ({
+    ...t,
+    titulo: traduzirTitulo(t.titulo),
+    tipo: TIPOS[t.tipo] ?? t.tipo ?? "",
+    ano: t.estreia ? Number(t.estreia.slice(0, 4)) : null,
+    emBreve: t.situacao === "not_yet_aired",
+  }));
+  gravarCache(chave, lista);
+  return lista;
+}
