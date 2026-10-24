@@ -202,10 +202,12 @@ async function montarMenuUsuario() {
       <a href="usuario.html?id=${usuario.id}" role="menuitem">Meu perfil público</a>
       <a href="perfil.html" role="menuitem">Editar perfil</a>
       <a href="lista.html" role="menuitem">Minha lista</a>
-      ${perfil?.papel === "admin" ? `<a href="admin.html" role="menuitem">Painel admin</a>` : ""}
+      ${perfil?.papel === "admin" ? `<a href="admin.html" role="menuitem" id="link-admin">Painel admin</a>` : ""}
       <hr>
       <button type="button" role="menuitem" id="btn-sair">Sair</button>
     </div>`;
+
+  if (perfil?.papel === "admin") avisarPedidosAdmin(alvo);
 
   const botao = alvo.querySelector("#btn-menu-usuario");
   const menu = alvo.querySelector(".menu-dropdown");
@@ -217,6 +219,19 @@ async function montarMenuUsuario() {
   document.addEventListener("click", () => { menu.classList.remove("aberto"); botao.setAttribute("aria-expanded", "false"); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") menu.classList.remove("aberto"); });
   alvo.querySelector("#btn-sair").addEventListener("click", sair);
+}
+
+/** Para o admin: bolinha na foto e contador no menu quando há pedidos de criador. */
+async function avisarPedidosAdmin(menu) {
+  const db = clienteSupabase();
+  if (!db) return;
+  const { data: n, error } = await db.rpc("pedidos_criador_pendentes");
+  if (error || !n) return;
+  const texto = `${n} ${n === 1 ? "pedido de criador" : "pedidos de criador"} para analisar`;
+  menu.querySelector("#btn-menu-usuario").insertAdjacentHTML("beforeend", `<span class="ponto-alerta" title="${texto}"><span class="sr-only">${texto}</span></span>`);
+  const link = menu.querySelector("#link-admin");
+  link.href = "admin.html?aba=criadores";
+  link.innerHTML = `Painel admin <span class="contador-alerta">${n}</span>`;
 }
 
 export async function entrar() {

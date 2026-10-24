@@ -5,7 +5,7 @@ import {
 } from "../ui.js";
 import { usuarioAtual, lerPerfil, salvarPerfil, lerLista } from "../store.js";
 import { buscar } from "../mal.js";
-import { REDES, normalizarLinkRede, videoIncorporavel } from "../perfis.js";
+import { REDES, normalizarLinkRede, videoIncorporavel, solicitarCriador, cancelarPedidoCriador, sairDeCriador } from "../perfis.js";
 
 await montarLayout();
 
@@ -40,6 +40,9 @@ function montar(perfil, lista) {
     tagEditadaManualmente: Boolean(perfil.tag),
   };
   const avatar = perfil.avatar || usuario.avatar;
+  const dadosCriador = perfil.criadorStatus === "pending" && perfil.criadorPendente
+    ? perfil.criadorPendente
+    : { youtube: perfil.youtube, tiktok: perfil.tiktok, instagram: perfil.instagram, videos: perfil.videos };
   const assistidos = lista.filter((a) => a.status === "assistido").length;
 
   alvo.innerHTML = `
@@ -82,43 +85,32 @@ function montar(perfil, lista) {
         <textarea id="campo-bio" maxlength="300" rows="3" placeholder="Ex.: Fã de isekai e shounen, assistindo tudo da temporada.">${esc(perfil.bio || "")}</textarea>
       </div>
 
-      <fieldset class="bloco-criador">
-        <label class="check check-destaque"><input type="checkbox" id="campo-criador" ${perfil.criador ? "checked" : ""}>
-          <span><strong>Sou criador de conteúdo</strong><br><span class="opcional">Mostre seus canais e vídeos numa aba própria do seu perfil.</span></span>
-        </label>
-        <div id="campos-criador" ${perfil.criador ? "" : "hidden"}>
-          ${Object.entries(REDES).map(([id, r]) => `
-            <div class="campo">
-              <label for="rede-${id}">${r.nome}</label>
-              <input id="rede-${id}" type="url" inputmode="url" value="${esc(perfil[id] || "")}" placeholder="${r.exemplo}">
-              <p class="erro" id="erro-rede-${id}" hidden>Esse link não é do ${r.nome}.</p>
-            </div>`).join("")}
-          <div class="campo">
-            <label for="campo-videos">Vídeos em destaque <span class="opcional">(até 12, um link por linha)</span></label>
-            <textarea id="campo-videos" rows="5" placeholder="https://youtube.com/watch?v=...\nhttps://www.tiktok.com/@voce/video/123...\nhttps://www.instagram.com/reel/...">${esc((perfil.videos || []).join("\n"))}</textarea>
-            <p class="ajuda">Aceita vídeos do YouTube (inclusive Shorts), TikTok e Instagram (reels e posts). No TikTok, use o link completo do vídeo, aquele com <code>/video/</code> e números; o link curto do app não funciona.</p>
-            <ul class="validacao-videos" id="validacao-videos"></ul>
-          </div>
-        </div>
-      </fieldset>
 
       <button class="btn btn-primario" type="submit" id="btn-salvar">Salvar perfil</button>
+    </form>
+
+    <form class="formulario formulario-criador" id="form-criador" novalidate>
+      <h2>Criador de conteúdo</h2>
+      <div id="status-criador"></div>
+      <div id="campos-criador" hidden>
+        ${Object.entries(REDES).map(([id, r]) => `
+          <div class="campo">
+            <label for="rede-${id}">${r.nome}</label>
+            <input id="rede-${id}" type="url" inputmode="url" value="${esc(dadosCriador[id] || "")}" placeholder="${r.exemplo}">
+          </div>`).join("")}
+        <div class="campo">
+          <label for="campo-videos">Vídeos em destaque <span class="opcional">(até 12, um link por linha)</span></label>
+          <textarea id="campo-videos" rows="5" placeholder="https://youtube.com/watch?v=...\nhttps://www.tiktok.com/@voce/video/123...\nhttps://www.instagram.com/reel/...">${esc((dadosCriador.videos || []).join("\n"))}</textarea>
+          <p class="ajuda">Aceita vídeos do YouTube (inclusive Shorts), TikTok e Instagram (reels e posts). No TikTok, use o link completo do vídeo, com <code>/video/</code> e números; o link curto do app não funciona.</p>
+          <ul class="validacao-videos" id="validacao-videos"></ul>
+        </div>
+        <div class="acoes-form">
+          <button class="btn btn-primario" type="submit" id="btn-solicitar"></button>
+        </div>
+      </div>
     </form>`;
 
-  // Criador de conteúdo: mostra/esconde os campos e confere os links de vídeo
-  const caixaCriador = alvo.querySelector("#campo-criador");
-  caixaCriador.addEventListener("change", () => { alvo.querySelector("#campos-criador").hidden = !caixaCriador.checked; });
-  const campoVideos = alvo.querySelector("#campo-videos");
-  const conferirVideos = () => {
-    const linhas = campoVideos.value.split("\n").map((l) => l.trim()).filter(Boolean);
-    alvo.querySelector("#validacao-videos").innerHTML = linhas.map((l) => {
-      const v = videoIncorporavel(l);
-      return `<li class="${v ? "ok" : "falha"}">${v ? `✓ ${REDES[v.rede].nome}` : "✗ Link não reconhecido"}: ${esc(l.length > 60 ? l.slice(0, 57) + "…" : l)}</li>`;
-    }).join("") + (linhas.length > 12 ? `<li class="falha">✗ Só os 12 primeiros vídeos serão salvos.</li>` : "");
-    return linhas;
-  };
-  campoVideos.addEventListener("input", conferirVideos);
-  conferirVideos();
+  montarCriador();
 
   const campoNick = alvo.querySelector("#campo-nick");
   const campoTag = alvo.querySelector("#campo-tag");
@@ -213,25 +205,8 @@ function montar(perfil, lista) {
     const botao = alvo.querySelector("#btn-salvar");
     botao.disabled = true;
     try {
-      // Campos de criador de conteúdo
-      const criador = caixaCriador.checked;
-      const redes = {};
-      for (const id of Object.keys(REDES)) {
-        const campo = alvo.querySelector(`#rede-${id}`);
-        const { ok, valor } = normalizarLinkRede(id, campo.value);
-        alvo.querySelector(`#erro-rede-${id}`).hidden = ok || !criador;
-        if (criador && !ok) { campo.focus(); throw new Error(`O link do ${REDES[id].nome} parece errado.`); }
-        redes[id] = valor;
-        campo.value = valor;
-      }
-      const videos = conferirVideos().filter((l) => videoIncorporavel(l)).slice(0, 12);
-      if (criador && !Object.values(redes).some(Boolean) && !videos.length) {
-        throw new Error("Como criador, adicione pelo menos um canal ou vídeo.");
-      }
-
       await salvarPerfil({
         bio: alvo.querySelector("#campo-bio").value,
-        criador, ...redes, videos,
         nick: estado.nick, tag: estado.tag,
         favoritoId: estado.favoritoId, favoritoTitulo: estado.favoritoTitulo, favoritoImagem: estado.favoritoImagem,
       });
@@ -249,4 +224,97 @@ function montar(perfil, lista) {
 
   mostrarEscolhido();
   atualizarPrevia();
+
+  // ------------------------------------------------------------
+  // Criador de conteúdo: pedido ao admin
+  // ------------------------------------------------------------
+  function montarCriador() {
+    const status = perfil.criadorStatus;
+    const statusEl = alvo.querySelector("#status-criador");
+    const campos = alvo.querySelector("#campos-criador");
+    const botao = alvo.querySelector("#btn-solicitar");
+    const dataPedido = perfil.criadorPedidoEm ? new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long" }).format(new Date(perfil.criadorPedidoEm)) : "";
+
+    const avisos = [];
+    if (perfil.criador) {
+      avisos.push(`<div class="aviso-criador aprovado"><strong>Você é criador de conteúdo verificado.</strong>
+        Seus canais e vídeos aparecem na aba Vídeos do seu perfil público. Mudanças nos links passam por uma nova análise; os atuais continuam no ar até lá.</div>`);
+    }
+    if (status === "pending") {
+      avisos.push(`<div class="aviso-criador pendente"><strong>Pedido enviado${dataPedido ? ` em ${dataPedido}` : ""}, aguardando análise do admin.</strong>
+        Você pode ajustar os links abaixo e reenviar, ou <button type="button" class="btn-texto" id="btn-cancelar-pedido">cancelar o pedido</button>.</div>`);
+    }
+    if (status === "rejected") {
+      avisos.push(`<div class="aviso-criador recusado"><strong>Seu último pedido foi recusado.</strong>
+        ${perfil.criadorMotivo ? `Motivo: “${esc(perfil.criadorMotivo)}”.` : ""} Você pode corrigir e enviar de novo.</div>`);
+    }
+    if (status === "none" || (status === "rejected" && !perfil.criador)) {
+      avisos.push(`<p class="secao-descricao">Você faz vídeos sobre anime no YouTube, TikTok ou Instagram? Peça o selo de criador. A equipe do AnimeSe confere seus links e, depois de aprovado, eles aparecem no seu perfil público.</p>
+        <button type="button" class="btn btn-contorno" id="btn-quero-criador">Quero ser criador de conteúdo</button>`);
+    }
+    statusEl.innerHTML = avisos.join("");
+
+    botao.textContent = perfil.criador ? "Enviar alterações para aprovação" : status === "pending" ? "Atualizar pedido" : "Solicitar acesso de criador";
+    campos.hidden = !(perfil.criador || status === "pending");
+    if (perfil.criador) {
+      botao.insertAdjacentHTML("afterend", `<button type="button" class="btn-texto perigo" id="btn-sair-criador">Deixar de ser criador</button>`);
+    }
+
+    statusEl.querySelector("#btn-quero-criador")?.addEventListener("click", (e) => {
+      campos.hidden = false;
+      e.target.remove();
+      alvo.querySelector("#rede-youtube").focus();
+    });
+
+    statusEl.querySelector("#btn-cancelar-pedido")?.addEventListener("click", async () => {
+      try { await cancelarPedidoCriador(); toast("Pedido cancelado"); location.reload(); }
+      catch (err) { toast(err.message); }
+    });
+
+    alvo.querySelector("#btn-sair-criador")?.addEventListener("click", async () => {
+      if (!confirm("Deixar de ser criador? O selo, os links e os vídeos saem do seu perfil. Para voltar, será preciso pedir de novo.")) return;
+      try { await sairDeCriador(); toast("Você deixou de ser criador"); location.reload(); }
+      catch (err) { toast(err.message); }
+    });
+
+    const campoVideos = alvo.querySelector("#campo-videos");
+    const conferirVideos = () => {
+      const linhas = campoVideos.value.split("\n").map((l) => l.trim()).filter(Boolean);
+      alvo.querySelector("#validacao-videos").innerHTML = linhas.map((l) => {
+        const v = videoIncorporavel(l);
+        return `<li class="${v ? "ok" : "falha"}">${v ? `✓ ${REDES[v.rede].nome}` : "✗ Link não reconhecido"}: ${esc(l.length > 60 ? l.slice(0, 57) + "…" : l)}</li>`;
+      }).join("") + (linhas.length > 12 ? `<li class="falha">✗ Só os 12 primeiros vídeos serão enviados.</li>` : "");
+      return linhas;
+    };
+    campoVideos.addEventListener("input", conferirVideos);
+    conferirVideos();
+
+    alvo.querySelector("#form-criador").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const dados = { videos: [] };
+      for (const id of Object.keys(REDES)) {
+        const campo = alvo.querySelector(`#rede-${id}`);
+        const { ok, valor } = normalizarLinkRede(id, campo.value);
+        if (!ok) { campo.focus(); toast(`O link do ${REDES[id].nome} parece errado.`); return; }
+        campo.value = valor;
+        dados[id] = valor || null;
+      }
+      const linhas = conferirVideos();
+      const invalidos = linhas.filter((l) => !videoIncorporavel(l));
+      if (invalidos.length) { campoVideos.focus(); toast("Corrija ou apague os links de vídeo marcados com ✗"); return; }
+      dados.videos = linhas.slice(0, 12);
+      if (!dados.youtube && !dados.tiktok && !dados.instagram && !dados.videos.length) {
+        toast("Adicione pelo menos um canal ou vídeo"); return;
+      }
+      botao.disabled = true;
+      try {
+        await solicitarCriador(dados);
+        toast("Pedido enviado! Você será avisado aqui quando o admin analisar.");
+        setTimeout(() => location.reload(), 1200);
+      } catch (err) {
+        toast(err.message);
+        botao.disabled = false;
+      }
+    });
+  }
 }

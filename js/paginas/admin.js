@@ -6,6 +6,9 @@ import {
   TIPOS_POST, idYoutube, capaDoPost, formatarData, textoParaHtml,
 } from "../conteudo.js";
 import { buscar } from "../mal.js";
+import {
+  REDES, videoIncorporavel, contarPedidosCriador, pedidosCriador, criadoresAprovados, avaliarCriador, revogarCriador,
+} from "../perfis.js";
 
 await montarLayout();
 
@@ -26,6 +29,7 @@ if (!usuario) {
     const aba = e.target.closest(".aba");
     if (aba) abrirAba(aba.dataset.aba);
   });
+  atualizarAlertaCriadores();
   const inicial = new URLSearchParams(location.search).get("aba") || "estatisticas";
   abrirAba(inicial);
 }
@@ -34,6 +38,7 @@ function abrirAba(nome) {
   abasEl.querySelectorAll(".aba").forEach((a) => a.setAttribute("aria-selected", String(a.dataset.aba === nome)));
   history.replaceState(null, "", `admin.html?aba=${nome}`);
   if (nome === "publicacoes") mostrarPublicacoes();
+  else if (nome === "criadores") mostrarCriadores();
   else mostrarEstatisticas();
 }
 
@@ -386,4 +391,123 @@ function editor(post) {
       botao.disabled = false;
     }
   });
+}
+
+// ============================================================
+// Criadores de conteúdo: pedidos para aprovar
+// ============================================================
+async function atualizarAlertaCriadores() {
+  const n = await contarPedidosCriador();
+  const el = document.getElementById("alerta-criadores");
+  el.textContent = n;
+  el.hidden = !n;
+  el.title = `${n} ${n === 1 ? "pedido aguardando" : "pedidos aguardando"} análise`;
+}
+
+function linksCriador(d) {
+  const redes = Object.keys(REDES).filter((r) => d[r]);
+  return redes.length
+    ? `<ul class="links-criador">${redes.map((r) => `<li><span>${REDES[r].nome}</span><a href="${esc(d[r])}" target="_blank" rel="noopener nofollow">${esc(d[r])}</a></li>`).join("")}</ul>`
+    : `<p class="secao-descricao">Nenhum canal informado.</p>`;
+}
+
+function videosCriador(lista = []) {
+  if (!lista.length) return `<p class="secao-descricao">Nenhum vídeo informado.</p>`;
+  return `<div class="videos-pedido">${lista.map((url) => {
+    const v = videoIncorporavel(url);
+    return v
+      ? `<div class="video-criador ${v.vertical ? "vertical" : ""}"><iframe src="${esc(v.embed)}" title="Vídeo enviado" loading="lazy" allowfullscreen></iframe>
+           <a href="${esc(url)}" target="_blank" rel="noopener nofollow">Abrir no ${REDES[v.rede].nome}</a></div>`
+      : `<p class="erro">Link não reconhecido: ${esc(url)}</p>`;
+  }).join("")}</div>`;
+}
+
+const nomeDo = (u) => u.nickname || u.display_name?.split(" ")[0] || "Usuário";
+const dataHora = (iso) => (iso ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(iso)) : "");
+
+async function mostrarCriadores() {
+  alvo.innerHTML = `<p class="secao-descricao">Carregando pedidos…</p>`;
+  let pedidos, aprovados;
+  try {
+    [pedidos, aprovados] = await Promise.all([pedidosCriador(), criadoresAprovados()]);
+  } catch (e) {
+    alvo.innerHTML = caixaErro(e.message);
+    return;
+  }
+
+  alvo.innerHTML = `
+    <section>
+      <div class="painel-admin-topo">
+        <h2>Pedidos aguardando análise</h2>
+        <span class="secao-descricao">Confira os canais e os vídeos antes de aprovar. Só depois da aprovação eles aparecem no perfil público.</span>
+      </div>
+      ${pedidos.length ? pedidos.map((u) => {
+        const jaCriador = u.is_creator;
+        return `
+        <article class="pedido-criador painel-admin" data-usuario="${u.id}">
+          <header>
+            ${avatarHtml(u.avatar_url, nomeDo(u))}
+            <div>
+              ${nomeComTag(nomeDo(u), u.tag, u.favorite_title, `usuario.html?id=${u.id}`)}
+              <span class="secao-descricao">${jaCriador ? "Criador aprovado pedindo para mudar os links" : "Novo pedido de criador"}, enviado em ${dataHora(u.creator_requested_at)}. No AnimeSe desde ${formatarData(u.created_at)}.</span>
+            </div>
+          </header>
+          <h3>Canais</h3>
+          ${linksCriador(u.creator_pending || {})}
+          ${jaCriador ? `<details><summary>Ver os links atuais (aprovados antes)</summary>${linksCriador({ youtube: u.youtube_url, tiktok: u.tiktok_url, instagram: u.instagram_url })}</details>` : ""}
+          <h3>Vídeos em destaque</h3>
+          ${videosCriador(u.creator_pending?.videos || [])}
+          <div class="decisao">
+            <label class="rotulo" for="motivo-${u.id}">Motivo da recusa <span class="opcional">(o usuário vê esse texto)</span></label>
+            <textarea id="motivo-${u.id}" rows="2" maxlength="500" placeholder="Ex.: Os vídeos não são sobre anime."></textarea>
+            <div class="acoes-form">
+              <button class="btn btn-primario" type="button" data-decisao="aprovar">Aprovar criador</button>
+              <button class="btn btn-contorno" type="button" data-decisao="recusar">Recusar pedido</button>
+            </div>
+          </div>
+        </article>`;
+      }).join("") : `<div class="vazio"><h2>Nenhum pedido pendente</h2><p>Quando alguém pedir o selo de criador, o pedido aparece aqui e no menu da sua foto.</p></div>`}
+    </section>
+
+    <section class="secao">
+      <div class="painel-admin-topo"><h2>Criadores aprovados</h2><span class="secao-descricao">${aprovados.length} no total</span></div>
+      ${aprovados.length ? `<ul class="lista-criadores">${aprovados.map((u) => `
+        <li data-usuario="${u.id}">
+          ${avatarHtml(u.avatar_url, nomeDo(u))}
+          <div class="info">
+            ${nomeComTag(nomeDo(u), u.tag, u.favorite_title, `usuario.html?id=${u.id}`)}
+            <span class="secao-descricao">${Object.keys(REDES).filter((r) => u[`${r}_url`]).map((r) => REDES[r].nome).join(", ") || "Sem canais"}, ${(u.creator_videos || []).length} vídeos. Aprovado em ${dataHora(u.creator_reviewed_at)}</span>
+          </div>
+          <button class="btn-texto perigo" type="button" data-revogar>Revogar selo</button>
+        </li>`).join("")}</ul>` : `<p class="secao-descricao">Nenhum criador aprovado ainda.</p>`}
+    </section>`;
+
+  alvo.querySelectorAll("[data-decisao]").forEach((b) => b.addEventListener("click", async () => {
+    const cartao = b.closest(".pedido-criador");
+    const id = cartao.dataset.usuario;
+    const aprovar = b.dataset.decisao === "aprovar";
+    const motivo = cartao.querySelector("textarea").value.trim();
+    if (!aprovar && !motivo && !confirm("Recusar sem explicar o motivo? O usuário só verá que foi recusado.")) return;
+    cartao.querySelectorAll("button").forEach((x) => (x.disabled = true));
+    try {
+      await avaliarCriador(id, aprovar, motivo);
+      toast(aprovar ? "Criador aprovado: o selo e os links já estão no perfil" : "Pedido recusado");
+      atualizarAlertaCriadores();
+      mostrarCriadores();
+    } catch (err) {
+      toast(err.message);
+      cartao.querySelectorAll("button").forEach((x) => (x.disabled = false));
+    }
+  }));
+
+  alvo.querySelectorAll("[data-revogar]").forEach((b) => b.addEventListener("click", async () => {
+    const li = b.closest("li");
+    const motivo = prompt("Motivo para revogar o selo (o usuário vê esse texto). Deixe em branco para não informar.");
+    if (motivo === null) return;
+    try {
+      await revogarCriador(li.dataset.usuario, motivo);
+      toast("Selo de criador revogado");
+      mostrarCriadores();
+    } catch (err) { toast(err.message); }
+  }));
 }

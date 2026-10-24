@@ -882,3 +882,38 @@ h3 { font-size: 1.05rem; }
   .perfil-bio { margin-left: auto; margin-right: auto; }
   .perfil-numeros { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ---------- Pedidos de criador ---------- */
+.contador-alerta {
+  display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; margin-left: 6px;
+  border-radius: 999px; background: var(--sakura); color: #fff; font-size: .75rem; font-weight: 700;
+}
+.menu-usuario > button { position: relative; }
+.ponto-alerta {
+  position: absolute; left: 30px; top: 2px; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--sakura); border: 2px solid var(--tinta);
+}
+.formulario-criador { margin-top: 24px; }
+.formulario-criador h2 { font-size: 1.2rem; }
+.aviso-criador { border-radius: var(--raio-md); padding: 12px 14px; margin-bottom: 12px; font-size: .95rem; }
+.aviso-criador strong { display: block; margin-bottom: 2px; }
+.aviso-criador.aprovado { background: #e3f4ec; color: #0f5236; }
+.aviso-criador.pendente { background: #fff4e0; color: #6b4a07; }
+.aviso-criador.recusado { background: #fdecec; color: #8a1c1c; }
+.aviso-criador .btn-texto { color: inherit; text-decoration: underline; }
+#form-criador .acoes-form { align-items: center; }
+
+.pedido-criador header { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
+.pedido-criador header > div { display: flex; flex-direction: column; gap: 2px; }
+.pedido-criador h3 { font-family: var(--fonte-texto); font-weight: 700; font-size: .95rem; margin: 16px 0 6px; }
+.links-criador { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.links-criador li { display: flex; gap: 10px; }
+.links-criador span { font-weight: 700; min-width: 80px; }
+.links-criador a { color: var(--sakura-escuro); word-break: break-all; }
+.videos-pedido { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; align-items: start; }
+.videos-pedido .video-criador.vertical iframe { max-height: 420px; }
+.decisao { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--borda); }
+.decisao textarea { width: 100%; font: inherit; padding: 10px 12px; border: 2px solid var(--borda); border-radius: var(--raio-sm); }
+.lista-criadores { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.lista-criadores li { display: flex; align-items: center; gap: 12px; background: var(--nuvem); border-radius: var(--raio-md); padding: 12px; box-shadow: var(--sombra); }
+.lista-criadores .info { display: flex; flex-direction: column; flex: 1; }

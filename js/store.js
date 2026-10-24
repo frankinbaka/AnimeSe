@@ -115,6 +115,11 @@ export async function lerPerfil() {
     tiktok: data?.tiktok_url || "",
     instagram: data?.instagram_url || "",
     videos: Array.isArray(data?.creator_videos) ? data.creator_videos : [],
+    // Pedido de criador (etapa 5): none | pending | approved | rejected
+    criadorStatus: data?.creator_status || (data?.is_creator ? "approved" : "none"),
+    criadorPendente: data?.creator_pending || null,
+    criadorPedidoEm: data?.creator_requested_at || null,
+    criadorMotivo: data?.creator_note || "",
   };
 }
 
@@ -135,15 +140,8 @@ export async function salvarPerfil(perfil) {
     favorite_title: perfil.favoritoTitulo || null,
     favorite_image: perfil.favoritoImagem || null,
     updated_at: new Date().toISOString(),
-    // Campos do perfil público (etapa 4), enviados só quando o formulário os tem
-    ...("criador" in perfil && {
-      bio: perfil.bio?.trim() || null,
-      is_creator: Boolean(perfil.criador),
-      youtube_url: perfil.criador ? perfil.youtube || null : null,
-      tiktok_url: perfil.criador ? perfil.tiktok || null : null,
-      instagram_url: perfil.criador ? perfil.instagram || null : null,
-      creator_videos: perfil.criador ? perfil.videos || [] : [],
-    }),
+    // "Sobre mim" (os links de criador vão por pedido ao admin, em perfis.js)
+    ...("bio" in perfil && { bio: perfil.bio?.trim() || null }),
   });
   if (error) {
     if (error.code === "23505") throw new Error("Esse nick já está em uso. Escolha outro.");

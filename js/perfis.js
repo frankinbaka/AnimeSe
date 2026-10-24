@@ -113,3 +113,62 @@ export function videoIncorporavel(url = "") {
   if (m) return { rede: "instagram", embed: `https://www.instagram.com/${m[1] === "reels" ? "reel" : m[1]}/${m[2]}/embed`, vertical: m[1] !== "p", url: u };
   return null;
 }
+
+// ------------------------------------------------------------
+// Pedido de acesso de criador (etapa 5)
+// ------------------------------------------------------------
+function erroAmigavel(error) {
+  if (/function .* does not exist|schema cache/i.test(error.message)) {
+    return new Error("O pedido de criador ainda não foi ativado no banco (falta rodar o SQL da etapa 5).");
+  }
+  return new Error(error.message);
+}
+
+/** Envia (ou reenvia) o pedido. dados: { youtube, tiktok, instagram, videos: [] } */
+export async function solicitarCriador(dados) {
+  const { error } = await db().rpc("solicitar_criador", { p_dados: dados });
+  if (error) throw erroAmigavel(error);
+}
+
+export async function cancelarPedidoCriador() {
+  const { error } = await db().rpc("cancelar_pedido_criador");
+  if (error) throw erroAmigavel(error);
+}
+
+export async function sairDeCriador() {
+  const { error } = await db().rpc("sair_de_criador");
+  if (error) throw erroAmigavel(error);
+}
+
+// ----- Admin -----
+export async function contarPedidosCriador() {
+  const { data, error } = await db().rpc("pedidos_criador_pendentes");
+  return error ? 0 : data || 0;
+}
+
+const CAMPOS_ADMIN =
+  "id, nickname, tag, display_name, avatar_url, favorite_title, created_at, is_creator, youtube_url, tiktok_url, instagram_url, creator_videos, creator_status, creator_pending, creator_requested_at, creator_reviewed_at, creator_note";
+
+export async function pedidosCriador() {
+  const { data, error } = await db().from("profiles").select(CAMPOS_ADMIN)
+    .eq("creator_status", "pending").order("creator_requested_at", { ascending: true });
+  if (error) throw erroAmigavel(error);
+  return data;
+}
+
+export async function criadoresAprovados() {
+  const { data, error } = await db().from("profiles").select(CAMPOS_ADMIN)
+    .eq("is_creator", true).order("creator_reviewed_at", { ascending: false });
+  if (error) throw erroAmigavel(error);
+  return data;
+}
+
+export async function avaliarCriador(usuarioId, aprovar, motivo = "") {
+  const { error } = await db().rpc("avaliar_criador", { p_usuario: usuarioId, p_aprovar: aprovar, p_motivo: motivo || null });
+  if (error) throw erroAmigavel(error);
+}
+
+export async function revogarCriador(usuarioId, motivo = "") {
+  const { error } = await db().rpc("revogar_criador", { p_usuario: usuarioId, p_motivo: motivo || null });
+  if (error) throw erroAmigavel(error);
+}
