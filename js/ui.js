@@ -3,7 +3,7 @@
 // avisos e a tag do anime favorito.
 // ============================================================
 
-import { NOME_DO_SITE } from "./config.js";
+import { NOME_DO_SITE, AUTOR_DO_SITE } from "./config.js";
 import { usuarioAtual, lerPerfil, entrarComGoogle, sair, MODO_DEMO, nomeStatus } from "./store.js";
 
 /** Escapa texto vindo da API antes de inserir no HTML. */
@@ -135,6 +135,7 @@ export async function montarLayout() {
       <p>Dados de animes fornecidos pelo <a href="https://myanimelist.net" target="_blank" rel="noopener">MyAnimeList</a>
       através da API oficial.
       ${esc(NOME_DO_SITE)} não tem ligação oficial com o MyAnimeList.</p>
+      <p class="copyright">© ${new Date().getFullYear()} ${esc(NOME_DO_SITE)}. Desenvolvido por ${esc(AUTOR_DO_SITE)}. Todos os direitos reservados.</p>
     </div>`;
 
   if (MODO_DEMO) {

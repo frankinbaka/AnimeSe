@@ -373,6 +373,8 @@ h3 { font-size: 1.05rem; }
 /* ---------- Rodapé ---------- */
 .site-footer { margin-top: 64px; padding: 32px 0; border-top: 1px solid var(--borda); color: var(--tinta-suave); font-size: .9rem; }
 .site-footer a { color: var(--tinta); }
+.site-footer p { margin: 0 0 8px; }
+.site-footer .copyright { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--borda); font-weight: 500; color: var(--tinta); }
 
 /* ---------- Responsivo ---------- */
 @media (max-width: 860px) {

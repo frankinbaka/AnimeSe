@@ -14,3 +14,4 @@ export const SUPABASE_URL = "";
 export const SUPABASE_ANON_KEY = "";
 
 export const NOME_DO_SITE = "AnimeSe";
+export const AUTOR_DO_SITE = "Frank Matheus";
