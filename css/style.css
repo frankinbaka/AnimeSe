@@ -1040,3 +1040,13 @@ h3 { font-size: 1.05rem; }
   background: rgba(15,20,40,.85); color: #fff; font: inherit; font-weight: 700;
 }
 .btn-som:hover { background: var(--sakura); }
+
+/* Tela de entrada do feed (libera o som com um toque) */
+.feed-entrada {
+  position: absolute; z-index: 6; inset: 0; width: 100%; border: 0; cursor: pointer;
+  display: grid; place-content: center; justify-items: center; gap: 10px;
+  background: rgba(10,14,30,.72); color: #d3d9ee; font: inherit;
+}
+.feed-entrada strong { font-family: var(--fonte-titulo); font-weight: 400; font-size: 1.6rem; color: #fff; }
+.feed-entrada .icone-play { position: static; width: 84px; height: 84px; font-size: 2rem; background: var(--sakura); }
+.feed-entrada:hover .icone-play { transform: scale(1.06); }

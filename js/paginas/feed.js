@@ -175,12 +175,37 @@ function ligarVideo(el, forcarSom = false) {
   midia.querySelector("iframe")?.remove();
   midia.querySelector(".btn-som")?.remove();
   const rede = midia.dataset.rede;
-  const mudo = !forcarSom && !podeTocarComSom() && rede !== "instagram";
+  // Ainda sem nenhum toque na página: espera o toque na tela de entrada
+  if (!forcarSom && !podeTocarComSom()) { mostrarEntrada(); return; }
+  const mudo = false;
   midia.insertAdjacentHTML("beforeend", `<iframe src="${esc(urlAutoplay(midia.dataset.embed, rede, mudo))}" title="Vídeo" allowfullscreen
     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
     ${mudo ? `<button type="button" class="btn-som">🔇 Ativar som</button>` : ""}`);
   midia.querySelector(".btn-som")?.addEventListener("click", () => ligarVideo(el, true));
 }
+/**
+ * Tela de entrada: um único toque libera o som para todos os vídeos,
+ * já que o navegador não permite som automático sem nenhuma interação.
+ */
+function mostrarEntrada() {
+  if (document.querySelector(".feed-entrada")) return;
+  feed.insertAdjacentHTML("beforebegin", `
+    <button type="button" class="feed-entrada" aria-label="Começar a assistir com som">
+      <span class="icone-play" aria-hidden="true">▶</span>
+      <strong>Toque para assistir</strong>
+      <span>Os vídeos tocam com som, um atrás do outro</span>
+    </button>`);
+  document.querySelector(".feed-entrada").addEventListener("click", (e) => {
+    e.currentTarget.remove();
+    const atual = [...feed.querySelectorAll(".item-feed")].find((el) => {
+      const r = el.getBoundingClientRect();
+      return r.top >= -10 && r.top < innerHeight / 2;
+    });
+    if (atual) ligarVideo(atual, true);
+    feed.focus();
+  });
+}
+
 function desligarVideo(el) {
   el.querySelector("[data-embed] iframe")?.remove();
   el.querySelector("[data-embed] .btn-som")?.remove();
