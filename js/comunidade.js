@@ -15,7 +15,10 @@ const db = () => {
 export const COMUNIDADE_ATIVA = !MODO_DEMO;
 
 // Campos públicos do autor (nick, tag, foto)
-const AUTOR = "autor:profiles(id, nickname, tag, display_name, avatar_url, favorite_title)";
+// O nome da ligação (!tabela_user_id_fkey) é necessário porque avaliações e
+// perfis também se ligam pela tabela de likes.
+const CAMPOS_AUTOR = "id, nickname, tag, display_name, avatar_url, favorite_title";
+const autorDe = (tabela) => `autor:profiles!${tabela}_user_id_fkey(${CAMPOS_AUTOR})`;
 
 export const NOTAS = {
   10: "Obra-prima", 9: "Excelente", 8: "Muito bom", 7: "Bom", 6: "Razoável",
@@ -58,9 +61,9 @@ export async function estatisticas(malId) {
 export async function avaliacoesDoAnime(malId) {
   const { data, error } = await db()
     .from("reviews")
-    .select(`id, user_id, score, body, spoiler, created_at, updated_at, ${AUTOR},
+    .select(`id, user_id, score, body, spoiler, created_at, updated_at, ${autorDe("reviews")},
              review_likes(count),
-             review_replies(id, user_id, body, created_at, ${AUTOR})`)
+             review_replies(id, user_id, body, created_at, ${autorDe("review_replies")})`)
     .eq("mal_id", malId)
     .order("created_at", { ascending: false })
     .order("created_at", { referencedTable: "review_replies", ascending: true })
@@ -73,7 +76,7 @@ export async function avaliacoesDoAnime(malId) {
 export async function ultimasAvaliacoes(limite = 12) {
   const { data, error } = await db()
     .from("reviews")
-    .select(`id, mal_id, anime_title, anime_image, score, body, spoiler, created_at, ${AUTOR}, review_likes(count)`)
+    .select(`id, mal_id, anime_title, anime_image, score, body, spoiler, created_at, ${autorDe("reviews")}, review_likes(count)`)
     .order("created_at", { ascending: false })
     .limit(limite);
   if (error) throw traduzirErro(error);
@@ -157,7 +160,7 @@ export async function animesSugeridos(limite = 24) {
 export async function sugestoesDoAnime(malId) {
   const { data, error } = await db()
     .from("recommendations")
-    .select(`id, user_id, reason, created_at, ${AUTOR}`)
+    .select(`id, user_id, reason, created_at, ${autorDe("recommendations")}`)
     .eq("mal_id", malId)
     .order("created_at", { ascending: false });
   if (error) throw traduzirErro(error);
