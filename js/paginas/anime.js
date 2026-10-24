@@ -46,7 +46,10 @@ function montarPagina(a) {
   ];
   return `
     <div class="anime-topo">
-      <img class="poster-grande" src="${esc(a.imagem)}" alt="Pôster de ${esc(a.titulo)}">
+      <div class="anime-coluna-esquerda">
+        <img class="poster-grande" src="${esc(a.imagem)}" alt="Pôster de ${esc(a.titulo)}">
+        <aside class="temporadas" id="temporadas" aria-labelledby="titulo-temporadas" hidden></aside>
+      </div>
       <div>
         <h1>${esc(a.titulo)}</h1>
         ${a.tituloOriginal !== a.titulo || a.tituloJapones
@@ -65,7 +68,6 @@ function montarPagina(a) {
         </p>
         <p><a href="${esc(a.urlMal)}" target="_blank" rel="noopener">Ver no MyAnimeList</a></p>
       </div>
-      <aside class="temporadas" id="temporadas" aria-labelledby="titulo-temporadas" hidden></aside>
     </div>
     ${COMUNIDADE_ATIVA ? `
       <section class="secao" id="secao-sugestoes" aria-labelledby="titulo-sugestoes"></section>
@@ -127,8 +129,8 @@ async function carregarTemporadas(anime) {
   };
 
   caixa.innerHTML = `
-    <h2 id="titulo-temporadas">Temporadas, filmes e OVAs</h2>
-    <p class="secao-descricao">${lista.length} títulos desta franquia, em ordem de estreia.</p>
+    <h2 id="titulo-temporadas">Franquia</h2>
+    <p class="secao-descricao">${lista.length} títulos, em ordem de estreia.</p>
     <div class="grupos-temporadas">
       ${grupos.map((g) => `
         <section>
