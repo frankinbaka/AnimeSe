@@ -1,6 +1,6 @@
-// Página inicial: carrossel de destaques, novidades, temporada atual, top e próximos.
+// Página inicial: carrossel de destaques, temporada atual, comunidade, top e próximos.
 import { COMUNIDADE_ATIVA, animesSugeridos } from "../comunidade.js";
-import { CONTEUDO_ATIVO, destaques, listarPosts, cartaoPost, capaDoPost, TIPOS_POST } from "../conteudo.js";
+import { CONTEUDO_ATIVO, destaques, capaDoPost, TIPOS_POST } from "../conteudo.js";
 import { montarCarrossel } from "../carrossel.js";
 import { montarLayout, cardAnime, esqueletos, caixaErro, esc, formatarNota, formatarNumero } from "../ui.js";
 import { temporadaAtual, topAnimes, proximaTemporada, nomeTemporada, temporadaDeHoje, sinopseEmPortugues } from "../mal.js";
@@ -14,14 +14,8 @@ grade.innerHTML = esqueletos(12);
 faixaTop.innerHTML = esqueletos(8);
 faixaProx.innerHTML = esqueletos(8);
 
-// Novidades publicadas pelo admin (destaques do carrossel + últimas publicações)
-const [postsDestaque, ultimosPosts] = CONTEUDO_ATIVO
-  ? await Promise.all([destaques(4).catch(() => []), listarPosts({ limite: 4 }).then((r) => r.itens).catch(() => [])])
-  : [[], []];
-if (ultimosPosts.length) {
-  document.getElementById("grade-novidades").innerHTML = ultimosPosts.map(cartaoPost).join("");
-  document.getElementById("secao-novidades").hidden = false;
-}
+// Publicações do admin marcadas para o carrossel
+const postsDestaque = CONTEUDO_ATIVO ? await destaques(4).catch(() => []) : [];
 
 let temporada = [];
 try {
@@ -44,7 +38,7 @@ montarCarrossel(document.getElementById("carrossel"), [
     fundoNitido: true,
     link: `post.html?id=${p.id}`,
     botoes: [{ href: `post.html?id=${p.id}`, texto: p.kind === "video" ? "Assistir vídeo" : "Ler agora", primario: true },
-             { href: "novidades.html", texto: "Mais novidades" }],
+             { href: "feed.html", texto: "Ver o feed" }],
   })),
   ...destaquesTemporada.map((a, i) => ({
     chamada: i === 0 ? "Destaque da temporada" : "Nesta temporada",

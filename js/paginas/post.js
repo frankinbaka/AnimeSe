@@ -11,12 +11,12 @@ const id = Number(new URLSearchParams(location.search).get("id"));
 if (!CONTEUDO_ATIVO) {
   alvo.innerHTML = caixaErro("As novidades precisam do Supabase configurado.");
 } else if (!id) {
-  alvo.innerHTML = `<div class="vazio"><h2>Publicação não informada</h2><a class="btn btn-primario" href="novidades.html">Ver novidades</a></div>`;
+  alvo.innerHTML = `<div class="vazio"><h2>Publicação não informada</h2><a class="btn btn-primario" href="feed.html">Ir para o feed</a></div>`;
 } else {
   try {
     const p = await lerPost(id);
     if (!p) {
-      alvo.innerHTML = `<div class="vazio"><h2>Publicação não encontrada</h2><p>Ela pode ter sido removida.</p><a class="btn btn-primario" href="novidades.html">Ver novidades</a></div>`;
+      alvo.innerHTML = `<div class="vazio"><h2>Publicação não encontrada</h2><p>Ela pode ter sido removida.</p><a class="btn btn-primario" href="feed.html">Ir para o feed</a></div>`;
     } else {
       mostrar(p);
     }
@@ -32,7 +32,7 @@ async function mostrar(p) {
 
   alvo.innerHTML = `
     <header class="post-cabecalho">
-      <p class="post-tipo"><a href="novidades.html?tipo=${p.kind}">${TIPOS_POST[p.kind].nome}</a>${p.published ? "" : ' <span class="selo selo-rascunho">Rascunho</span>'}</p>
+      <p class="post-tipo"><a href="feed.html?item=o:${p.id}">${TIPOS_POST[p.kind].nome} no feed</a>${p.published ? "" : ' <span class="selo selo-rascunho">Rascunho</span>'}</p>
       <h1>${esc(p.title)}</h1>
       ${p.summary ? `<p class="post-resumo">${esc(p.summary)}</p>` : ""}
       <p class="post-meta">${formatarData(p.published_at || p.created_at)}${admin ? ` <a href="admin.html?aba=publicacoes" class="btn-texto">Editar no painel</a>` : ""}</p>
@@ -54,7 +54,7 @@ async function mostrar(p) {
       </aside>` : ""}
 
     <section class="secao" id="mais-posts" hidden>
-      <div class="secao-topo"><h2>Mais novidades</h2><a href="novidades.html">Ver todas</a></div>
+      <div class="secao-topo"><h2>Mais do AnimeSe</h2><a href="feed.html">Ver o feed</a></div>
       <div class="grade-posts" id="grade-mais"></div>
     </section>`;
 

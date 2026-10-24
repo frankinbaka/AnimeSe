@@ -917,3 +917,118 @@ h3 { font-size: 1.05rem; }
 .lista-criadores { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .lista-criadores li { display: flex; align-items: center; gap: 12px; background: var(--nuvem); border-radius: var(--raio-md); padding: 12px; box-shadow: var(--sombra); }
 .lista-criadores .info { display: flex; flex-direction: column; flex: 1; }
+
+/* ============================================================
+   Feed estilo TikTok
+   ============================================================ */
+.pagina-feed { background: #0f1428; }
+.pagina-feed .site-footer, .pagina-feed main > .container > .aviso { display: none; }
+.pagina-feed main { position: relative; }
+.feed {
+  height: calc(100dvh - 64px); overflow-y: auto; scroll-snap-type: y mandatory;
+  overscroll-behavior: contain; scrollbar-width: none;
+}
+.feed::-webkit-scrollbar { display: none; }
+.feed:focus { outline: none; }
+.item-feed { height: 100%; scroll-snap-align: start; scroll-snap-stop: always; display: grid; place-items: center; padding: 16px; }
+.feed-palco { position: relative; display: flex; align-items: flex-end; gap: 16px; height: 100%; max-height: 860px; }
+
+.feed-midia {
+  position: relative; height: 100%; border-radius: 16px; overflow: hidden; background: #000;
+  box-shadow: 0 10px 40px rgba(0,0,0,.5);
+}
+.feed-midia.vertical { aspect-ratio: 9 / 16; }
+.feed-midia.horizontal { width: min(760px, calc(100vw - 140px)); height: auto; aspect-ratio: 16 / 9; align-self: center; }
+.feed-midia iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.feed-espera { position: absolute; inset: 0; display: grid; place-content: center; gap: 10px; justify-items: center; color: #aab4d4; font-weight: 600; }
+.feed-espera .icone-play { position: static; }
+
+/* Publicação oficial (imagem + texto) */
+.feed-post { display: flex; flex-direction: column; aspect-ratio: 9 / 16; text-decoration: none; background: var(--nuvem); color: var(--tinta); }
+.feed-post img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; }
+.feed-post-texto { padding: 18px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+.feed-post-texto .selo-tipo { position: static; align-self: flex-start; }
+.feed-post-texto h2 { font-size: 1.4rem; margin: 0; }
+.feed-post-texto p { margin: 0; color: var(--tinta-suave); display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
+.feed-ler-mais { margin-top: auto; font-weight: 700; color: var(--sakura-escuro); }
+
+.feed-info {
+  position: absolute; left: 0; right: 88px; bottom: 0; padding: 60px 16px 16px;
+  color: #fff; pointer-events: none;
+  background: linear-gradient(transparent, rgba(0,0,0,.75));
+  border-radius: 0 0 16px 16px;
+}
+.feed-midia.horizontal ~ .feed-info { position: static; background: none; padding: 0; width: auto; }
+.feed-info a, .feed-info button { pointer-events: auto; }
+.feed-autor { display: flex; align-items: center; gap: 10px; }
+.feed-autor > div { display: flex; flex-direction: column; }
+.feed-autor .avatar { width: 40px; height: 40px; border: 2px solid #fff; }
+.avatar-oficial { background: var(--sakura); font-family: var(--fonte-titulo); }
+.feed-autor .link-usuario, .feed-autor .nome-usuario { color: #fff; }
+.feed-quando { font-size: .82rem; color: #d3d9ee; }
+.feed-legenda { margin: 8px 0 0; font-size: .95rem; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+.selo-oficial { background: #fff; color: var(--tinta); font-size: .7rem; padding: 2px 8px; }
+
+.feed-acoes { display: flex; flex-direction: column; gap: 14px; padding-bottom: 8px; }
+.feed-acao {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: 0;
+  color: #fff; font: inherit; font-size: .75rem; font-weight: 600; cursor: pointer;
+}
+.feed-acao .icone {
+  display: grid; place-items: center; width: 50px; height: 50px; border-radius: 50%;
+  background: rgba(255,255,255,.12); font-size: 1.35rem; transition: transform .15s, background .15s;
+}
+.feed-acao:hover .icone { background: rgba(255,255,255,.22); }
+.feed-acao[aria-pressed="true"][data-acao="curtir"] .icone { background: var(--sakura); transform: scale(1.06); }
+.feed-acao[aria-pressed="true"][data-acao="republicar"] .icone { background: #1f8a5b; }
+.feed-acao:disabled { opacity: .55; cursor: default; }
+
+.feed-barra { position: absolute; z-index: 5; top: 14px; right: 16px; display: flex; gap: 8px; }
+.feed-convite { color: #d3d9ee; font-size: .85rem; background: rgba(255,255,255,.08); padding: 8px 14px; border-radius: 999px; text-decoration: none; }
+.feed-convite:hover { color: #fff; }
+.feed-carregando, .feed-fim {
+  height: 100%; scroll-snap-align: start; display: grid; place-content: center; gap: 12px;
+  text-align: center; color: #d3d9ee; padding: 24px;
+}
+.feed-fim h2 { color: #fff; }
+
+/* Diálogos (publicar e denunciar) */
+.dialogo {
+  border: 0; border-radius: var(--raio-md); padding: 24px; width: min(520px, calc(100vw - 32px));
+  box-shadow: 0 20px 60px rgba(0,0,0,.4); color: var(--tinta);
+}
+.dialogo::backdrop { background: rgba(10,14,30,.7); }
+.dialogo h2 { font-size: 1.3rem; }
+.dialogo textarea { width: 100%; font: inherit; padding: 10px 12px; border: 2px solid var(--borda); border-radius: var(--raio-sm); }
+.pub-previa { margin-bottom: 16px; max-width: 260px; }
+.pub-previa .video-criador.vertical iframe { max-height: 320px; }
+.motivos-denuncia { border: 0; padding: 0; margin: 0 0 12px; display: grid; gap: 4px; }
+.motivos-denuncia .check { margin: 0; padding: 6px 8px; border-radius: var(--raio-sm); }
+.motivos-denuncia .check:has(input:checked) { background: var(--ceu); font-weight: 600; }
+
+/* Denúncias no painel */
+.btn-perigo { background: #b42318; color: #fff; }
+.btn-perigo:hover { background: #8f1c13; }
+.denuncia-colunas { display: grid; grid-template-columns: 260px 1fr; gap: 20px; }
+.denuncia-midia .video-criador.vertical iframe { max-height: 440px; }
+.denuncia-autor { margin: 0 0 6px; }
+.lista-denuncias { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; font-size: .92rem; }
+.lista-denuncias li { display: flex; flex-direction: column; background: var(--ceu); border-radius: var(--raio-sm); padding: 8px 10px; }
+.lista-denuncias .data { color: var(--tinta-suave); font-size: .8rem; }
+.titulo-bloco { font-size: 1.1rem; margin: 20px 0 10px; }
+.cartao-republicado { display: flex; flex-direction: column; gap: 6px; text-decoration: none; background: var(--nuvem); border-radius: var(--raio-md); overflow: hidden; }
+.cartao-republicado img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+.cartao-republicado strong { padding: 0 10px 10px; }
+
+@media (max-width: 640px) {
+  .item-feed { padding: 0; }
+  .feed-palco { width: 100%; justify-content: center; }
+  .feed-midia.vertical, .feed-post { border-radius: 0; height: 100%; width: 100%; aspect-ratio: auto; }
+  .feed-midia.horizontal { width: 100vw; border-radius: 0; }
+  .feed-info { border-radius: 0; right: 64px; }
+  .feed-acoes { position: absolute; right: 8px; bottom: 24px; }
+  .feed-acao .icone { width: 44px; height: 44px; font-size: 1.2rem; }
+  .feed-acao .contagem { text-shadow: 0 1px 2px rgba(0,0,0,.8); }
+  .feed-barra { top: 10px; right: 10px; }
+  .denuncia-colunas { grid-template-columns: 1fr; }
+}

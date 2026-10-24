@@ -102,7 +102,7 @@ export function toast(msg) {
 
 const LINKS = [
   { href: "index.html", texto: "Início" },
-  { href: "novidades.html", texto: "Novidades" },
+  { href: "feed.html", texto: "Feed" },
   { href: "buscar.html", texto: "Buscar" },
   { href: "sortear.html", texto: "O que assistir?" },
   { href: "comunidade.html", texto: "Comunidade" },
@@ -221,17 +221,25 @@ async function montarMenuUsuario() {
   alvo.querySelector("#btn-sair").addEventListener("click", sair);
 }
 
-/** Para o admin: bolinha na foto e contador no menu quando há pedidos de criador. */
+/** Para o admin: bolinha na foto e contador no menu quando há pedidos de criador ou denúncias. */
 async function avisarPedidosAdmin(menu) {
   const db = clienteSupabase();
   if (!db) return;
-  const { data: n, error } = await db.rpc("pedidos_criador_pendentes");
-  if (error || !n) return;
-  const texto = `${n} ${n === 1 ? "pedido de criador" : "pedidos de criador"} para analisar`;
-  menu.querySelector("#btn-menu-usuario").insertAdjacentHTML("beforeend", `<span class="ponto-alerta" title="${texto}"><span class="sr-only">${texto}</span></span>`);
+  const [pedidos, denuncias] = await Promise.all([
+    db.rpc("pedidos_criador_pendentes").then((r) => (r.error ? 0 : r.data || 0)),
+    db.rpc("denuncias_abertas").then((r) => (r.error ? 0 : r.data || 0)),
+  ]);
+  const n = pedidos + denuncias;
+  if (!n) return;
+  const partes = [
+    pedidos ? `${pedidos} ${pedidos === 1 ? "pedido de criador" : "pedidos de criador"}` : "",
+    denuncias ? `${denuncias} ${denuncias === 1 ? "publicação denunciada" : "publicações denunciadas"}` : "",
+  ].filter(Boolean).join(" e ");
+  menu.querySelector("#btn-menu-usuario").insertAdjacentHTML("beforeend", `<span class="ponto-alerta" title="${partes}"><span class="sr-only">${partes}</span></span>`);
   const link = menu.querySelector("#link-admin");
-  link.href = "admin.html?aba=criadores";
+  link.href = `admin.html?aba=${denuncias ? "denuncias" : "criadores"}`;
   link.innerHTML = `Painel admin <span class="contador-alerta">${n}</span>`;
+  link.title = partes;
 }
 
 export async function entrar() {

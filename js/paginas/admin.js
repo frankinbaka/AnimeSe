@@ -9,6 +9,7 @@ import { buscar } from "../mal.js";
 import {
   REDES, videoIncorporavel, contarPedidosCriador, pedidosCriador, criadoresAprovados, avaliarCriador, revogarCriador,
 } from "../perfis.js";
+import { contarDenunciasAbertas, denunciasParaAdmin, resolverDenuncias, MOTIVOS_DENUNCIA } from "../feed.js";
 
 await montarLayout();
 
@@ -30,6 +31,7 @@ if (!usuario) {
     if (aba) abrirAba(aba.dataset.aba);
   });
   atualizarAlertaCriadores();
+  atualizarAlertaDenuncias();
   const inicial = new URLSearchParams(location.search).get("aba") || "estatisticas";
   abrirAba(inicial);
 }
@@ -39,6 +41,7 @@ function abrirAba(nome) {
   history.replaceState(null, "", `admin.html?aba=${nome}`);
   if (nome === "publicacoes") mostrarPublicacoes();
   else if (nome === "criadores") mostrarCriadores();
+  else if (nome === "denuncias") mostrarDenuncias();
   else mostrarEstatisticas();
 }
 
@@ -48,7 +51,7 @@ function abrirAba(nome) {
 const NOMES_PAGINAS = {
   "/index.html": "Início", "/anime.html": "Páginas de anime", "/buscar.html": "Buscar",
   "/sortear.html": "O que assistir?", "/comunidade.html": "Comunidade", "/lista.html": "Minha lista",
-  "/perfil.html": "Meu perfil", "/novidades.html": "Novidades", "/post.html": "Publicações", "/admin.html": "Painel admin",
+  "/perfil.html": "Editar perfil", "/usuario.html": "Perfis públicos", "/feed.html": "Feed", "/novidades.html": "Novidades (antiga)", "/post.html": "Publicações", "/admin.html": "Painel admin",
 };
 const nomePagina = (p) => NOMES_PAGINAS[p] || p;
 
@@ -200,7 +203,7 @@ async function mostrarPublicacoes() {
 
   alvo.innerHTML = `
     <div class="painel-admin-topo">
-      <p class="secao-descricao">${itens.length} ${itens.length === 1 ? "publicação" : "publicações"}. As marcadas com ★ aparecem no carrossel da página inicial.</p>
+      <p class="secao-descricao">${itens.length} ${itens.length === 1 ? "publicação" : "publicações"}. Publicadas vão para o feed como posts oficiais do AnimeSe. As marcadas com ★ também aparecem no carrossel da página inicial.</p>
       <button class="btn btn-primario" id="btn-nova">Nova publicação</button>
     </div>
     ${itens.length ? `
@@ -509,5 +512,96 @@ async function mostrarCriadores() {
       toast("Selo de criador revogado");
       mostrarCriadores();
     } catch (err) { toast(err.message); }
+  }));
+}
+
+// ============================================================
+// Denúncias do feed
+// ============================================================
+async function atualizarAlertaDenuncias() {
+  const n = await contarDenunciasAbertas();
+  const el = document.getElementById("alerta-denuncias");
+  el.textContent = n;
+  el.hidden = !n;
+  el.title = `${n} ${n === 1 ? "publicação denunciada" : "publicações denunciadas"} aguardando análise`;
+}
+
+const SITUACOES_DENUNCIA = {
+  mantida: "Mantida por você", removida: "Removida por você", removida_auto: "Removida automaticamente (5 denúncias em 24 h)",
+};
+
+function cartaoDenuncia(g, aberto) {
+  const v = g.video_url ? videoIncorporavel(g.video_url) : null;
+  const nomeAutorDen = g.autor ? nomeDo(g.autor) : "Publicação oficial";
+  const contagem = {};
+  g.denuncias.forEach((d) => (contagem[d.motivo] = (contagem[d.motivo] || 0) + 1));
+  return `
+    <article class="painel-admin denuncia" data-chave="${g.chave}">
+      <div class="denuncia-colunas">
+        <div class="denuncia-midia">
+          ${v && aberto ? `<div class="video-criador ${v.vertical ? "vertical" : ""}"><iframe src="${esc(v.embed)}" title="Vídeo denunciado" loading="lazy" allowfullscreen></iframe></div>`
+            : v ? `<a href="${esc(g.video_url)}" target="_blank" rel="noopener nofollow">Abrir o vídeo no ${REDES[v.rede].nome}</a>`
+            : `<a href="feed.html?item=${g.chave}">Ver no feed</a>`}
+        </div>
+        <div class="denuncia-info">
+          <p class="denuncia-autor">Publicado por ${g.autor ? nomeComTag(nomeAutorDen, g.autor.tag, "", `usuario.html?id=${g.autor.id}`) : esc(nomeAutorDen)}</p>
+          ${g.legenda ? `<p class="secao-descricao">Legenda: “${esc(g.legenda)}”</p>` : ""}
+          <p><strong>${g.denuncias.length} ${g.denuncias.length === 1 ? "denúncia" : "denúncias"}:</strong>
+            ${Object.entries(contagem).map(([m, n]) => `${esc(MOTIVOS_DENUNCIA[m])} (${n})`).join(", ")}</p>
+          <ul class="lista-denuncias">
+            ${g.denuncias.map((d) => `<li>
+              <span>${esc(MOTIVOS_DENUNCIA[d.motivo])}${d.detalhe ? `: “${esc(d.detalhe)}”` : ""}</span>
+              <span class="data">por ${d.denunciante ? `<a href="usuario.html?id=${d.denunciante.id}">${esc(nomeDo(d.denunciante))}</a>` : "usuário"}, ${dataHora(d.created_at)}</span>
+            </li>`).join("")}
+          </ul>
+          ${aberto ? `
+            <div class="acoes-form">
+              <button class="btn btn-contorno" type="button" data-resolver="manter">Está tudo ok, manter</button>
+              <button class="btn btn-perigo" type="button" data-resolver="remover">Remover publicação</button>
+            </div>` : `<p class="selo ${g.situacao === "mantida" ? "selo-publicado" : "selo-rascunho"}">${SITUACOES_DENUNCIA[g.situacao] || g.situacao}</p>`}
+        </div>
+      </div>
+    </article>`;
+}
+
+async function mostrarDenuncias() {
+  alvo.innerHTML = `<p class="secao-descricao">Carregando denúncias…</p>`;
+  let dados;
+  try {
+    dados = await denunciasParaAdmin();
+  } catch (e) {
+    alvo.innerHTML = caixaErro(e.message);
+    return;
+  }
+
+  alvo.innerHTML = `
+    <section>
+      <div class="painel-admin-topo">
+        <h2>Aguardando análise</h2>
+        <span class="secao-descricao">Vídeos com 5 denúncias de pessoas diferentes em 24 horas saem do ar sozinhos.</span>
+      </div>
+      ${dados.abertas.length ? dados.abertas.map((g) => cartaoDenuncia(g, true)).join("")
+        : `<div class="vazio"><h2>Nenhuma denúncia aberta</h2><p>Quando alguém denunciar uma publicação do feed, ela aparece aqui e no menu da sua foto.</p></div>`}
+    </section>
+    ${dados.resolvidas.length ? `
+      <section class="secao">
+        <div class="painel-admin-topo"><h2>Resolvidas recentemente</h2></div>
+        ${dados.resolvidas.map((g) => cartaoDenuncia(g, false)).join("")}
+      </section>` : ""}`;
+
+  alvo.querySelectorAll("[data-resolver]").forEach((b) => b.addEventListener("click", async () => {
+    const cartao = b.closest(".denuncia");
+    const remover = b.dataset.resolver === "remover";
+    if (remover && !confirm("Remover esta publicação do feed? Não dá para desfazer.")) return;
+    cartao.querySelectorAll("button").forEach((x) => (x.disabled = true));
+    try {
+      await resolverDenuncias(cartao.dataset.chave, remover);
+      toast(remover ? "Publicação removida" : "Publicação mantida e denúncias arquivadas");
+      atualizarAlertaDenuncias();
+      mostrarDenuncias();
+    } catch (err) {
+      toast(err.message);
+      cartao.querySelectorAll("button").forEach((x) => (x.disabled = false));
+    }
   }));
 }

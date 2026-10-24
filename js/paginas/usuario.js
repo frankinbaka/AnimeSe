@@ -2,11 +2,12 @@
 // sugestões e, para criadores de conteúdo, redes e vídeos.
 import { montarLayout, esc, caixaErro, cardAnime, avatarHtml, nomeComTag, formatarNumero } from "../ui.js";
 import { usuarioAtual } from "../store.js";
-import { NOTAS, tempoAtras } from "../comunidade.js";
+import { NOTAS, tempoAtras, nomeAutor as nomeAutorFeed } from "../comunidade.js";
 import {
   perfilPublico, listaDoUsuario, avaliacoesDoUsuario, comentariosDoUsuario, sugestoesDoUsuario,
   REDES, videoIncorporavel,
 } from "../perfis.js";
+import { videosDoFeedDe, republicadosPor } from "../feed.js";
 
 await montarLayout();
 
@@ -31,16 +32,18 @@ async function mostrar(p) {
   document.title = `${nome} — AnimeSe`;
   const souEu = eu?.id === p.id;
 
-  const [lista, avaliacoes, comentarios, sugestoes] = await Promise.all([
+  const [lista, avaliacoes, comentarios, sugestoes, doFeed, republicados] = await Promise.all([
     listaDoUsuario(p.id).catch(() => []),
     avaliacoesDoUsuario(p.id).catch(() => []),
     comentariosDoUsuario(p.id).catch(() => []),
     sugestoesDoUsuario(p.id).catch(() => []),
+    videosDoFeedDe(p.id).catch(() => []),
+    republicadosPor(p.id).catch(() => []),
   ]);
 
   const redes = Object.keys(REDES).filter((r) => p[`${r}_url`]);
   const videos = (p.creator_videos || []).map(videoIncorporavel).filter(Boolean);
-  const criador = p.is_creator && (redes.length || videos.length);
+  const criador = p.is_creator && (redes.length || videos.length || doFeed.length);
   // O perfil público mostra só os animes já assistidos
   const assistidosLista = lista.filter((a) => a.status === "assistido");
   const assistidos = assistidosLista.length;
@@ -50,7 +53,8 @@ async function mostrar(p) {
     { id: "avaliacoes", nome: "Avaliações", total: avaliacoes.length },
     { id: "comentarios", nome: "Comentários", total: comentarios.length },
     { id: "sugestoes", nome: "Sugestões", total: sugestoes.length },
-    ...(criador ? [{ id: "videos", nome: "Vídeos", total: videos.length }] : []),
+    ...(criador ? [{ id: "videos", nome: "Vídeos", total: videos.length + doFeed.length }] : []),
+    { id: "republicados", nome: "Republicados", total: republicados.length },
   ];
 
   alvo.innerHTML = `
@@ -137,15 +141,30 @@ async function mostrar(p) {
         </a>`).join("")}</div>` : vazio(`${pronome} ainda não sugeriu animes para a comunidade.`);
     },
     videos() {
+      const grade = (lista) => `<div class="grade-videos">${lista.map((v) => `
+        <div class="video-criador ${v.vertical ? "vertical" : ""}">
+          <iframe src="${esc(v.embed)}" title="Vídeo do ${REDES[v.rede].nome}" loading="lazy" allowfullscreen
+                  allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+          ${v.chave ? `<a href="feed.html?item=${v.chave}">Ver no feed</a>` : `<a href="${esc(v.url)}" target="_blank" rel="noopener nofollow">Abrir no ${REDES[v.rede].nome}</a>`}
+        </div>`).join("")}</div>`;
+      const noFeed = doFeed.map((i) => ({ ...videoIncorporavel(i.video_url), chave: i.chave })).filter((v) => v.embed);
       painel.innerHTML = `
         ${redes.length ? `<p class="secao-descricao">Siga ${souEu ? "seus canais" : `os canais de ${esc(nome)}`}: ${redes.map((r) => `<a href="${esc(p[`${r}_url`])}" target="_blank" rel="noopener nofollow">${REDES[r].nome}</a>`).join(", ")}.</p>` : ""}
-        ${videos.length ? `<div class="grade-videos">${videos.map((v) => `
-          <div class="video-criador ${v.vertical ? "vertical" : ""}">
-            <iframe src="${esc(v.embed)}" title="Vídeo do ${REDES[v.rede].nome}" loading="lazy" allowfullscreen
-                    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
-            <a href="${esc(v.url)}" target="_blank" rel="noopener nofollow">Abrir no ${REDES[v.rede].nome}</a>
-          </div>`).join("")}</div>`
-          : vazio(souEu ? `Você ainda não adicionou vídeos. <a href="perfil.html">Adicione no seu perfil</a>.` : `${esc(nome)} ainda não destacou vídeos.`)}`;
+        ${videos.length ? `<h2 class="titulo-bloco">Em destaque</h2>${grade(videos)}` : ""}
+        ${noFeed.length ? `<h2 class="titulo-bloco">Publicados no feed</h2>${grade(noFeed)}` : ""}
+        ${!videos.length && !noFeed.length ? vazio(souEu ? `Você ainda não publicou vídeos. <a href="feed.html">Publique no feed</a>.` : `${esc(nome)} ainda não publicou vídeos.`) : ""}`;
+    },
+    republicados() {
+      if (!republicados.length) return (painel.innerHTML = vazio(`${pronome} ainda não republicou nada do feed.`));
+      painel.innerHTML = `<div class="grade-videos">${republicados.map((i) => {
+        const v = i.video_url ? videoIncorporavel(i.video_url) : null;
+        const autorNome = i.origem === "oficial" ? "AnimeSe" : nomeAutorFeed(i.autor);
+        return `<div class="video-criador ${v?.vertical ? "vertical" : ""}">
+          ${v ? `<iframe src="${esc(v.embed)}" title="Vídeo republicado" loading="lazy" allowfullscreen></iframe>`
+              : `<a class="cartao-republicado" href="post.html?id=${i.chave.slice(2)}">${i.imagem ? `<img src="${esc(i.imagem)}" alt="">` : ""}<strong>${esc(i.titulo || "")}</strong></a>`}
+          <span class="secao-descricao">De ${esc(autorNome)}. <a href="feed.html?item=${i.chave}">Ver no feed</a></span>
+        </div>`;
+      }).join("")}</div>`;
     },
   };
 
