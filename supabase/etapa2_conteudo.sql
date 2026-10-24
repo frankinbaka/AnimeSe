@@ -108,6 +108,21 @@ create table if not exists public.site_visits (
   created_at  timestamptz not null default now()
 );
 create index if not exists visitas_por_data on public.site_visits (created_at desc);
+
+-- true = começo de uma visita (a pessoa não abria nenhuma página havia 30 min).
+-- Navegar entre páginas ou atualizar não conta como visita nova.
+alter table public.site_visits add column if not exists nova_sessao boolean not null default true;
+create index if not exists visitas_por_visitante_data on public.site_visits (visitor, created_at desc);
+
+-- Corrige o histórico registrado antes desta coluna existir
+with marcado as (
+  select id, created_at - lag(created_at) over (partition by visitor order by created_at) as intervalo
+    from public.site_visits
+)
+update public.site_visits v
+   set nova_sessao = (m.intervalo is null or m.intervalo > interval '30 minutes')
+  from marcado m
+ where m.id = v.id;
 create index if not exists visitas_por_visitante on public.site_visits (visitor, path, created_at desc);
 
 alter table public.site_visits enable row level security;
@@ -118,14 +133,23 @@ revoke all on public.site_visits from anon, authenticated;
 -- navegador em menos de 30 minutos não conta outra vez.
 create or replace function public.registrar_visita(p_visitor text, p_path text)
 returns void language plpgsql security definer set search_path = public as $$
+declare
+  ultima timestamptz;
 begin
   if p_visitor is null or char_length(p_visitor) not between 8 and 64 then return; end if;
+  -- As visitas do próprio admin não entram nas estatísticas
+  if public.is_admin() then return; end if;
   p_path := left(coalesce(nullif(p_path, ''), '/'), 120);
+
+  -- Mesma página de novo em menos de 30 min (atualizar, voltar): ignora
   if exists (
     select 1 from public.site_visits
      where visitor = p_visitor and path = p_path and created_at > now() - interval '30 minutes'
   ) then return; end if;
-  insert into public.site_visits (visitor, path, user_id) values (p_visitor, p_path, auth.uid());
+
+  select max(created_at) into ultima from public.site_visits where visitor = p_visitor;
+  insert into public.site_visits (visitor, path, user_id, nova_sessao)
+  values (p_visitor, p_path, auth.uid(), ultima is null or ultima < now() - interval '30 minutes');
 end $$;
 
 grant execute on function public.registrar_visita(text, text) to anon, authenticated;
@@ -149,9 +173,10 @@ begin
       'com_nick', (select count(*) from profiles where nickname is not null)
     ),
     'visitas', jsonb_build_object(
-      'hoje',   (select count(*) from site_visits where created_at >= date_trunc('day', now() at time zone 'America/Sao_Paulo') at time zone 'America/Sao_Paulo'),
-      'dias7',  (select count(*) from site_visits where created_at > now() - interval '7 days'),
-      'dias30', (select count(*) from site_visits where created_at > now() - interval '30 days'),
+      'hoje',   (select count(*) from site_visits where nova_sessao and created_at >= date_trunc('day', now() at time zone 'America/Sao_Paulo') at time zone 'America/Sao_Paulo'),
+      'dias7',  (select count(*) from site_visits where nova_sessao and created_at > now() - interval '7 days'),
+      'dias30', (select count(*) from site_visits where nova_sessao and created_at > now() - interval '30 days'),
+      'paginas30', (select count(*) from site_visits where created_at > now() - interval '30 days'),
       'unicos7',  (select count(distinct visitor) from site_visits where created_at > now() - interval '7 days'),
       'unicos30', (select count(distinct visitor) from site_visits where created_at > now() - interval '30 days')
     ),
@@ -159,7 +184,7 @@ begin
       select jsonb_agg(jsonb_build_object('dia', d.dia::date, 'visitas', coalesce(v.visitas, 0), 'visitantes', coalesce(v.visitantes, 0)) order by d.dia)
         from generate_series((now() at time zone 'America/Sao_Paulo')::date - 29, (now() at time zone 'America/Sao_Paulo')::date, interval '1 day') as d(dia)
         left join (
-          select (created_at at time zone 'America/Sao_Paulo')::date as dia, count(*) as visitas, count(distinct visitor) as visitantes
+          select (created_at at time zone 'America/Sao_Paulo')::date as dia, count(*) filter (where nova_sessao) as visitas, count(distinct visitor) as visitantes
             from site_visits where created_at > now() - interval '31 days' group by 1
         ) v on v.dia = d.dia::date
     ), '[]'::jsonb),

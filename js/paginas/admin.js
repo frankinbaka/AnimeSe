@@ -74,7 +74,7 @@ async function mostrarEstatisticas() {
       ${tile("Usuários cadastrados", n(e.usuarios.total), `+${n(e.usuarios.dias7)} nos últimos 7 dias`)}
       ${tile("Visitas hoje", n(e.visitas.hoje))}
       ${tile("Visitas em 7 dias", n(e.visitas.dias7), `${n(e.visitas.unicos7)} ${e.visitas.unicos7 === 1 ? "visitante único" : "visitantes únicos"}`)}
-      ${tile("Visitas em 30 dias", n(e.visitas.dias30), `${n(e.visitas.unicos30)} ${e.visitas.unicos30 === 1 ? "visitante único" : "visitantes únicos"}`)}
+      ${tile("Visitas em 30 dias", n(e.visitas.dias30), `${n(e.visitas.unicos30)} ${e.visitas.unicos30 === 1 ? "visitante único" : "visitantes únicos"}${e.visitas.paginas30 != null ? `, ${n(e.visitas.paginas30)} páginas vistas` : ""}`)}
       ${tile("Avaliações", n(e.comunidade.avaliacoes), `${n(e.comunidade.respostas)} ${e.comunidade.respostas === 1 ? "resposta" : "respostas"}, ${n(e.comunidade.likes)} ${e.comunidade.likes === 1 ? "like" : "likes"}`)}
       ${tile("Sugestões da comunidade", n(e.comunidade.sugestoes))}
       ${tile("Animes nas listas", n(e.listas.total), `${n(e.listas.assistido)} já assistidos`)}
@@ -93,7 +93,7 @@ async function mostrarEstatisticas() {
       <section class="painel-admin">
         <h2>Páginas mais vistas</h2>
         <p class="secao-descricao">Últimos 30 dias</p>
-        ${tabela(["Página", "Visitas"], e.paginas.map((p) => [esc(nomePagina(p.pagina)), n(p.visitas)]), "Nenhuma visita registrada ainda.")}
+        ${tabela(["Página", "Vezes aberta"], e.paginas.map((p) => [esc(nomePagina(p.pagina)), n(p.visitas)]), "Nenhuma visita registrada ainda.")}
       </section>
       <section class="painel-admin">
         <h2>Animes mais adicionados às listas</h2>
@@ -118,7 +118,7 @@ async function mostrarEstatisticas() {
         </ul>
       </section>
     </div>
-    <p class="nota-rodape">As visitas são contadas pelo próprio AnimeSe, sem guardar dados pessoais. A mesma pessoa abrindo a mesma página várias vezes em 30 minutos conta uma vez só.</p>`;
+    <p class="nota-rodape">As visitas são contadas pelo próprio AnimeSe, sem guardar dados pessoais. Uma visita é cada vez que alguém entra no site: navegar entre páginas ou atualizar não conta de novo, e só conta outra visita depois de 30 minutos sem abrir nada. As suas visitas como admin não entram na conta.</p>`;
 
   ligarTooltip();
 }
