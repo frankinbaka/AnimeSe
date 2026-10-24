@@ -1,0 +1,400 @@
+/* =========================================================
+   AnimeSe — estilos globais
+   Paleta: céu de key visual (azul claro), tinta índigo,
+   acento sakura. A cor de status tem significado próprio.
+   ========================================================= */
+
+:root {
+  --ceu: #e9f0fb;          /* fundo da página */
+  --nuvem: #ffffff;        /* superfícies */
+  --tinta: #1a2240;        /* texto principal */
+  --tinta-suave: #4b5578;  /* texto secundário */
+  --borda: #cfdaee;
+  --sakura: #e2457a;       /* acento: ações e a tag do usuário */
+  --sakura-escuro: #b8285c;
+
+  --st-assistindo: #2f6fd6;
+  --st-assistido: #1f8a5b;
+  --st-pretendo: #c9810f;
+  --st-dropado: #8a5a66;
+
+  --raio-sm: 6px;
+  --raio-md: 12px;
+  --sombra: 0 1px 2px rgba(26, 34, 64, .08), 0 6px 18px rgba(26, 34, 64, .06);
+
+  --fonte-titulo: "Dela Gothic One", system-ui, sans-serif;
+  --fonte-texto: "Zen Kaku Gothic New", system-ui, sans-serif;
+
+  --largura: 1180px;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--ceu);
+  color: var(--tinta);
+  font-family: var(--fonte-texto);
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+img { max-width: 100%; display: block; }
+a { color: inherit; }
+
+h1, h2, h3 {
+  font-family: var(--fonte-titulo);
+  font-weight: 400;
+  line-height: 1.15;
+  margin: 0 0 .5em;
+}
+h1 { font-size: clamp(1.9rem, 4.5vw, 3rem); }
+h2 { font-size: clamp(1.3rem, 2.6vw, 1.75rem); }
+h3 { font-size: 1.05rem; }
+
+.container {
+  width: 100%;
+  max-width: var(--largura);
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+:focus-visible {
+  outline: 3px solid var(--sakura);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+/* ---------- Cabeçalho ---------- */
+.site-header {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--tinta);
+  color: #fff;
+}
+.site-header .container {
+  display: flex; align-items: center; gap: 24px;
+  height: 64px;
+}
+.logo {
+  font-family: var(--fonte-titulo);
+  font-size: 1.4rem;
+  text-decoration: none;
+  letter-spacing: .01em;
+  display: flex; align-items: center; gap: 8px;
+}
+.logo-marca {
+  display: inline-grid; place-items: center;
+  width: 32px; height: 32px;
+  background: var(--sakura);
+  border-radius: 50%;
+  font-size: .95rem;
+}
+.nav-principal { display: flex; gap: 4px; flex: 1; }
+.nav-principal a {
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: var(--raio-sm);
+  color: #c9d2ee;
+  font-weight: 500;
+}
+.nav-principal a:hover { color: #fff; background: rgba(255,255,255,.08); }
+.nav-principal a[aria-current="page"] { color: #fff; box-shadow: inset 0 -2px 0 var(--sakura); border-radius: 0; }
+
+.busca-rapida { display: flex; }
+.busca-rapida input {
+  width: 220px;
+  border: 0; border-radius: 999px;
+  padding: 8px 14px;
+  font: inherit; font-size: .9rem;
+  background: rgba(255,255,255,.12); color: #fff;
+}
+.busca-rapida input::placeholder { color: #aab4d4; }
+
+/* Menu do usuário */
+.menu-usuario { position: relative; }
+.menu-usuario > button {
+  display: flex; align-items: center; gap: 10px;
+  background: transparent; border: 0; color: #fff;
+  font: inherit; cursor: pointer; padding: 4px 6px; border-radius: 999px;
+}
+.menu-usuario > button:hover { background: rgba(255,255,255,.08); }
+.avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  object-fit: cover; background: var(--tinta-suave);
+  display: inline-grid; place-items: center;
+  font-weight: 700; color: #fff;
+}
+.menu-dropdown {
+  position: absolute; right: 0; top: calc(100% + 8px);
+  min-width: 220px;
+  background: var(--nuvem); color: var(--tinta);
+  border-radius: var(--raio-md); box-shadow: var(--sombra);
+  padding: 6px; display: none;
+}
+.menu-dropdown.aberto { display: block; }
+.menu-dropdown a, .menu-dropdown button {
+  display: block; width: 100%; text-align: left;
+  padding: 10px 12px; border-radius: var(--raio-sm);
+  text-decoration: none; background: none; border: 0;
+  font: inherit; color: inherit; cursor: pointer;
+}
+.menu-dropdown a:hover, .menu-dropdown button:hover { background: var(--ceu); }
+.menu-dropdown hr { border: 0; border-top: 1px solid var(--borda); margin: 6px 0; }
+
+.menu-toggle { display: none; }
+
+/* ---------- Nome + tag do usuário ---------- */
+.nome-usuario { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; }
+.tag-anime {
+  display: inline-block;
+  font-family: var(--fonte-titulo);
+  font-size: .72em;
+  line-height: 1;
+  padding: 4px 6px 3px;
+  background: var(--sakura);
+  color: #fff;
+  border-radius: 4px;
+  transform: rotate(-3deg);
+  letter-spacing: .04em;
+}
+
+/* ---------- Botões ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 18px;
+  border-radius: 999px; border: 2px solid transparent;
+  font: inherit; font-weight: 700; cursor: pointer;
+  text-decoration: none;
+}
+.btn-primario { background: var(--sakura); color: #fff; }
+.btn-primario:hover { background: var(--sakura-escuro); }
+.btn-claro { background: #fff; color: var(--tinta); }
+.btn-contorno { border-color: var(--borda); background: transparent; color: var(--tinta); }
+.btn-contorno:hover { border-color: var(--tinta); }
+.btn:disabled { opacity: .6; cursor: progress; }
+.btn-google img { width: 18px; height: 18px; }
+
+/* ---------- Hero (destaque da temporada) ---------- */
+.hero {
+  position: relative;
+  color: #fff;
+  background: var(--tinta);
+  overflow: hidden;
+  min-height: 420px;
+}
+.hero-fundo {
+  position: absolute; inset: 0;
+  background-size: cover; background-position: center 25%;
+  filter: blur(18px) saturate(1.2);
+  transform: scale(1.15);
+  opacity: .55;
+}
+.hero::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, rgba(26,34,64,.95) 0%, rgba(26,34,64,.65) 55%, rgba(26,34,64,.2) 100%);
+}
+.hero .container {
+  position: relative; z-index: 1;
+  display: grid; grid-template-columns: 1fr 240px; gap: 40px;
+  align-items: center;
+  padding-top: 48px; padding-bottom: 48px;
+}
+.hero-chamada { color: #f7b3c9; font-weight: 700; margin: 0 0 12px; }
+.hero h1 { max-width: 16ch; }
+.hero-sinopse { max-width: 60ch; color: #dde3f5; margin: 0 0 24px;
+  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.hero-meta { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; color: #c9d2ee; }
+.hero-meta strong { color: #fff; }
+.hero-poster {
+  border-radius: var(--raio-md);
+  box-shadow: 0 20px 40px rgba(0,0,0,.4);
+  transform: rotate(2deg);
+  aspect-ratio: 225 / 320; object-fit: cover; width: 100%;
+}
+.hero-acoes { display: flex; gap: 12px; flex-wrap: wrap; }
+
+/* ---------- Seções e grade de animes ---------- */
+.secao { padding-top: 40px; padding-bottom: 8px; }
+.secao-topo { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.secao-topo a { font-weight: 700; color: var(--sakura-escuro); text-decoration: none; white-space: nowrap; }
+.secao-topo a:hover { text-decoration: underline; }
+.secao-descricao { color: var(--tinta-suave); margin: -8px 0 16px; }
+
+.grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 20px 16px;
+}
+
+.card-anime { text-decoration: none; display: block; }
+.card-anime .poster {
+  position: relative;
+  aspect-ratio: 225 / 320;
+  border-radius: var(--raio-md);
+  overflow: hidden;
+  background: var(--borda);
+}
+.card-anime img { width: 100%; height: 100%; object-fit: cover; transition: transform .25s; }
+.card-anime:hover img { transform: scale(1.04); }
+.card-anime .nota {
+  position: absolute; left: 8px; top: 8px;
+  background: rgba(26,34,64,.88); color: #fff;
+  font-weight: 700; font-size: .8rem;
+  padding: 2px 8px; border-radius: 999px;
+}
+.card-anime .status-pill { position: absolute; left: 8px; bottom: 8px; }
+.card-anime h3 {
+  font-family: var(--fonte-texto); font-weight: 700; font-size: .95rem;
+  margin: 8px 0 2px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.card-anime .detalhe { font-size: .82rem; color: var(--tinta-suave); margin: 0; }
+
+/* Esqueleto de carregamento */
+.esqueleto .poster { animation: pulsar 1.2s ease-in-out infinite; }
+.esqueleto .linha { height: 12px; background: var(--borda); border-radius: 4px; margin-top: 8px; width: 80%; animation: pulsar 1.2s ease-in-out infinite; }
+@keyframes pulsar { 50% { opacity: .5; } }
+
+/* Faixa horizontal (top animes) */
+.faixa { display: grid; grid-auto-flow: column; grid-auto-columns: 150px; gap: 16px; overflow-x: auto; padding-bottom: 12px; scroll-snap-type: x mandatory; }
+.faixa > * { scroll-snap-align: start; }
+
+/* ---------- Status ---------- */
+.status-pill {
+  display: inline-block; font-size: .75rem; font-weight: 700;
+  padding: 3px 9px; border-radius: 999px; color: #fff;
+}
+.st-assistindo { background: var(--st-assistindo); }
+.st-assistido { background: var(--st-assistido); }
+.st-pretendo { background: var(--st-pretendo); }
+.st-dropado { background: var(--st-dropado); }
+
+/* ---------- Página do anime ---------- */
+.anime-topo { display: grid; grid-template-columns: 240px 1fr; gap: 32px; padding: 32px 0; }
+.anime-topo .poster-grande { border-radius: var(--raio-md); box-shadow: var(--sombra); width: 100%; }
+.anime-titulo-alt { color: var(--tinta-suave); margin: -4px 0 16px; }
+.anime-numeros { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 20px; padding: 0; list-style: none; }
+.anime-numeros li { background: var(--nuvem); border: 1px solid var(--borda); border-radius: var(--raio-md); padding: 10px 14px; min-width: 110px; }
+.anime-numeros span { display: block; font-size: .78rem; color: var(--tinta-suave); }
+.anime-numeros strong { font-size: 1.15rem; }
+.generos { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
+.genero { background: var(--nuvem); border: 1px solid var(--borda); border-radius: 999px; padding: 2px 10px; font-size: .82rem; }
+
+.painel-lista { background: var(--nuvem); border-radius: var(--raio-md); padding: 16px; box-shadow: var(--sombra); margin-bottom: 24px; }
+.painel-lista h2 { font-size: 1rem; font-family: var(--fonte-texto); font-weight: 700; }
+.opcoes-status { display: flex; flex-wrap: wrap; gap: 8px; }
+.opcao-status {
+  border: 2px solid var(--borda); background: #fff; color: var(--tinta);
+  padding: 8px 14px; border-radius: 999px; font: inherit; font-weight: 600; cursor: pointer;
+}
+.opcao-status[aria-pressed="true"] { color: #fff; border-color: transparent; }
+.opcao-status[aria-pressed="true"].st-btn-assistindo { background: var(--st-assistindo); }
+.opcao-status[aria-pressed="true"].st-btn-assistido { background: var(--st-assistido); }
+.opcao-status[aria-pressed="true"].st-btn-pretendo { background: var(--st-pretendo); }
+.opcao-status[aria-pressed="true"].st-btn-dropado { background: var(--st-dropado); }
+.link-remover { background: none; border: 0; color: var(--tinta-suave); text-decoration: underline; cursor: pointer; font: inherit; font-size: .9rem; margin-top: 10px; padding: 0; }
+
+.sinopse { max-width: 70ch; white-space: pre-line; }
+.trailer { aspect-ratio: 16/9; width: 100%; max-width: 720px; border: 0; border-radius: var(--raio-md); }
+
+/* ---------- Busca ---------- */
+.busca-grande { display: flex; gap: 8px; margin: 24px 0; }
+.busca-grande input {
+  flex: 1; font: inherit; font-size: 1.1rem;
+  padding: 14px 18px; border-radius: 999px;
+  border: 2px solid var(--borda); background: #fff;
+}
+.busca-grande input:focus { border-color: var(--tinta); outline: none; }
+
+/* ---------- Minha lista ---------- */
+.abas { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0 24px; }
+.aba {
+  border: 2px solid var(--borda); background: transparent; color: var(--tinta);
+  padding: 8px 14px; border-radius: 999px; font: inherit; font-weight: 600; cursor: pointer;
+}
+.aba[aria-selected="true"] { background: var(--tinta); color: #fff; border-color: var(--tinta); }
+.aba .contador { opacity: .7; margin-left: 4px; }
+
+/* ---------- Perfil ---------- */
+.perfil-cartao {
+  display: flex; align-items: center; gap: 20px;
+  background: var(--nuvem); border-radius: var(--raio-md);
+  padding: 24px; box-shadow: var(--sombra); margin: 24px 0;
+}
+.perfil-cartao .avatar { width: 80px; height: 80px; font-size: 2rem; }
+.perfil-cartao .nome-usuario { font-size: 1.5rem; }
+.perfil-cartao p { margin: 4px 0 0; color: var(--tinta-suave); }
+
+.formulario { background: var(--nuvem); border-radius: var(--raio-md); padding: 24px; box-shadow: var(--sombra); max-width: 640px; }
+.campo { margin-bottom: 20px; }
+.campo label { display: block; font-weight: 700; margin-bottom: 6px; }
+.campo input {
+  width: 100%; font: inherit; padding: 10px 12px;
+  border: 2px solid var(--borda); border-radius: var(--raio-sm); background: #fff;
+}
+.campo input:focus { border-color: var(--tinta); outline: none; }
+.campo .ajuda { font-size: .85rem; color: var(--tinta-suave); margin: 6px 0 0; }
+.campo .erro { font-size: .85rem; color: #b42318; margin: 6px 0 0; }
+.campo-tag { display: flex; gap: 8px; align-items: center; }
+.campo-tag input { width: 110px; text-transform: uppercase; font-family: var(--fonte-titulo); letter-spacing: .04em; }
+
+.favorito-escolhido { display: flex; gap: 12px; align-items: center; background: var(--ceu); padding: 10px; border-radius: var(--raio-sm); margin-top: 8px; }
+.favorito-escolhido img { width: 44px; height: 62px; object-fit: cover; border-radius: 4px; }
+.favorito-escolhido button { margin-left: auto; }
+
+.sugestoes { list-style: none; margin: 4px 0 0; padding: 4px; background: #fff; border: 1px solid var(--borda); border-radius: var(--raio-sm); max-height: 280px; overflow-y: auto; }
+.sugestoes:empty { display: none; }
+.sugestoes button { display: flex; gap: 10px; align-items: center; width: 100%; padding: 6px; background: none; border: 0; text-align: left; font: inherit; cursor: pointer; border-radius: 4px; }
+.sugestoes button:hover, .sugestoes button:focus { background: var(--ceu); }
+.sugestoes img { width: 32px; height: 45px; object-fit: cover; border-radius: 3px; }
+
+/* ---------- Avisos / estados ---------- */
+.aviso { background: #fff7e6; border: 1px solid #f1d39a; color: #6b4a07; padding: 12px 16px; border-radius: var(--raio-md); margin: 16px 0; }
+.vazio { text-align: center; padding: 48px 16px; color: var(--tinta-suave); }
+.vazio h2 { color: var(--tinta); }
+.erro-caixa { background: #fdecec; border: 1px solid #f3b4b4; color: #8a1c1c; padding: 12px 16px; border-radius: var(--raio-md); }
+
+.toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px);
+  background: var(--tinta); color: #fff; padding: 12px 20px; border-radius: 999px;
+  box-shadow: var(--sombra); opacity: 0; transition: .25s; z-index: 50; pointer-events: none;
+}
+.toast.visivel { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+.paginacao { display: flex; justify-content: center; gap: 12px; margin: 32px 0; }
+
+/* ---------- Rodapé ---------- */
+.site-footer { margin-top: 64px; padding: 32px 0; border-top: 1px solid var(--borda); color: var(--tinta-suave); font-size: .9rem; }
+.site-footer a { color: var(--tinta); }
+
+/* ---------- Responsivo ---------- */
+@media (max-width: 860px) {
+  .busca-rapida { display: none; }
+  .hero .container { grid-template-columns: 1fr; }
+  .hero-poster { display: none; }
+  .anime-topo { grid-template-columns: 1fr; }
+  .anime-topo .poster-grande { max-width: 200px; }
+}
+@media (max-width: 640px) {
+  .site-header .container { gap: 12px; }
+  .menu-toggle { display: inline-grid; place-items: center; background: none; border: 0; color: #fff; font-size: 1.4rem; cursor: pointer; width: 40px; height: 40px; }
+  .nav-principal {
+    display: none; position: absolute; left: 0; right: 0; top: 64px;
+    background: var(--tinta); flex-direction: column; padding: 8px 16px 16px;
+  }
+  .nav-principal.aberto { display: flex; }
+  .menu-usuario .nome-curto { display: none; }
+  .logo { flex: 1; }
+  .grade { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 16px 12px; }
+  .perfil-cartao { flex-direction: column; text-align: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
