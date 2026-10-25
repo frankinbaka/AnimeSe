@@ -1449,3 +1449,6 @@ h3 { font-size: 1.05rem; }
 }
 #pagina-publica { max-width: 820px; }
 .btn[hidden], .carregar-mais [hidden] { display: none; }
+.publicacao-rotulo { margin: -4px 0 10px; font-size: .82rem; font-weight: 600; color: var(--tinta-suave); }
+.btn-republicar[aria-pressed="true"] { border-color: var(--st-assistido); color: var(--verde-texto); background: var(--verde-claro); }
+.lista-republicadas { max-width: 760px; }

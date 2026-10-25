@@ -13,8 +13,9 @@ import { contagem, euSigo, seguir, listaSocial } from "../social.js";
 import { toast, entrar } from "../ui.js";
 import { completarFranquias, agrupar, cardGrupo, ligarGrupos } from "../franquias.js";
 import { PAGINAS_ATIVAS } from "../config.js";
-import { paginasDoUsuario } from "../paginas-dados.js";
-import { avatarPagina } from "../paginas-ui.js";
+import { paginasDoUsuario, republicadasPor, minhasCurtidas, minhasRepublicacoes } from "../paginas-dados.js";
+import { avatarPagina, cardPublicacao, ligarPublicacoes } from "../paginas-ui.js";
+import { tempoAtras as haQuanto } from "../comunidade.js";
 
 await montarLayout();
 
@@ -49,7 +50,9 @@ async function mostrar(p) {
     contagem(p.id),
     euSigo(p.id).catch(() => false),
   ]);
-  const paginasDele = PAGINAS_ATIVAS ? await paginasDoUsuario(p.id).catch(() => []) : [];
+  const [paginasDele, republicadas] = PAGINAS_ATIVAS
+    ? await Promise.all([paginasDoUsuario(p.id).catch(() => []), republicadasPor(p.id).catch(() => [])])
+    : [[], []];
   let seguidores = social.seguidores;
 
   const redes = Object.keys(REDES).filter((r) => p[`${r}_url`]);
@@ -65,7 +68,8 @@ async function mostrar(p) {
     { id: "comentarios", nome: "Comentários", total: comentarios.length },
     { id: "sugestoes", nome: "Sugestões", total: sugestoes.length },
     ...(criador ? [{ id: "videos", nome: "Vídeos", total: videos.length + doFeed.length }] : []),
-    ...(FEED_ATIVO ? [{ id: "republicados", nome: "Republicados", total: republicados.length }] : []),
+    ...(PAGINAS_ATIVAS ? [{ id: "republicacoes", nome: "Republicados", total: republicadas.length }] : []),
+    ...(FEED_ATIVO ? [{ id: "republicados", nome: PAGINAS_ATIVAS ? "Vídeos republicados" : "Republicados", total: republicados.length }] : []),
     { id: "seguidores", nome: "Seguidores", total: seguidores },
     { id: "seguindo", nome: "Seguindo", total: social.seguindo },
   ];
@@ -195,6 +199,16 @@ async function mostrar(p) {
         ${videos.length ? `<h2 class="titulo-bloco">Em destaque</h2>${grade(videos)}` : ""}
         ${noFeed.length ? `<h2 class="titulo-bloco">Publicados no feed</h2>${grade(noFeed)}` : ""}
         ${!videos.length && !noFeed.length ? vazio(souEu ? (FEED_ATIVO ? `Você ainda não publicou vídeos. <a href="feed.html">Publique no feed</a>.` : `Você ainda não destacou vídeos. <a href="perfil.html">Adicione no seu perfil</a>.`) : `${esc(nome)} ainda não publicou vídeos.`) : ""}`;
+    },
+    async republicacoes() {
+      if (!republicadas.length) return (painel.innerHTML = vazio(`${pronome} ainda não republicou nenhuma publicação.`));
+      const ids = republicadas.map((x) => x.id);
+      const [curtidas, minhas] = await Promise.all([minhasCurtidas(ids).catch(() => new Set()), minhasRepublicacoes(ids).catch(() => new Set())]);
+      painel.innerHTML = `<div class="lista-publicacoes lista-republicadas">${republicadas.map((post) => cardPublicacao(post, {
+        curtido: curtidas.has(post.id), republicado: minhas.has(post.id),
+        rotulo: `${souEu ? "Você republicou" : `${esc(nome)} republicou`} ${haQuanto(post.republicadoEm)}`,
+      })).join("")}</div>`;
+      ligarPublicacoes(painel.querySelector(".lista-republicadas"), { obterPost: (id) => republicadas.find((x) => x.id === id) });
     },
     republicados() {
       if (!republicados.length) return (painel.innerHTML = vazio(`${pronome} ainda não republicou nada do feed.`));

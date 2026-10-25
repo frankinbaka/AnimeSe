@@ -278,7 +278,7 @@ async function montarMenuUsuario() {
       <a href="usuario.html?id=${usuario.id}" role="menuitem">Meu perfil público</a>
       <a href="perfil.html" role="menuitem">Editar perfil</a>
       <a href="lista.html" role="menuitem">Minha lista</a>
-      ${PAGINAS_ATIVAS ? `<a href="paginas.html?aba=minhas" role="menuitem">Minhas páginas</a>` : ""}
+      ${PAGINAS_ATIVAS ? `<a href="paginas.html?aba=minhas" role="menuitem">Minha página</a>` : ""}
       <a href="apoiar.html" role="menuitem">Apoiar o AnimeSe ♥</a>
       ${perfil?.papel === "admin" ? `<a href="admin.html" role="menuitem" id="link-admin">Painel admin</a>` : ""}
       <hr>

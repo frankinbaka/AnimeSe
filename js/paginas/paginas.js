@@ -26,7 +26,7 @@ async function iniciar() {
     { id: "seguindo", nome: "Seguindo" },
     { id: "descobrir", nome: "Descobrir" },
     { id: "paginas", nome: "Páginas" },
-    ...(eu ? [{ id: "minhas", nome: "Minhas páginas" }] : []),
+    ...(eu ? [{ id: "minhas", nome: "Minha página" }] : []),
   ];
   let ativa = params.get("aba");
   if (!abas.some((a) => a.id === ativa)) ativa = eu && sigo.size ? "seguindo" : "descobrir";
@@ -109,8 +109,6 @@ async function iniciar() {
       painel.innerHTML = `<p class="secao-descricao">Carregando…</p>`;
       let lista;
       try { lista = await minhasPaginas(); } catch (e) { painel.innerHTML = caixaErro(e.message); return; }
-      const temPendente = lista.some((p) => p.status === "pending");
-      const ativas = lista.filter((p) => ["approved", "pending"].includes(p.status)).length;
       painel.innerHTML = `
         <div class="minhas-paginas">
           ${lista.map((p) => `
@@ -128,12 +126,12 @@ async function iniciar() {
                 ${p.status !== "suspended" ? `<button type="button" class="btn btn-contorno btn-pequeno" data-editar="${p.id}">Editar</button>` : ""}
                 <button type="button" class="btn-link-perigo" data-apagar-pagina="${p.id}">${p.status === "pending" ? "Cancelar pedido" : "Apagar"}</button>
               </div>
-            </article>`).join("") || `<p class="secao-descricao">Você ainda não tem páginas.</p>`}
+            </article>`).join("") || `<p class="secao-descricao">Você ainda não tem uma página. Com ela, você publica textos e imagens para quem seguir.</p>`}
         </div>
         <div id="area-form-pagina">
-          ${temPendente ? `<p class="dica">Você já tem um pedido aguardando aprovação.</p>`
-            : ativas >= 3 ? `<p class="dica">Você chegou ao limite de 3 páginas.</p>`
-            : `<button type="button" class="btn btn-primario" id="btn-nova-pagina">+ Criar uma página</button>`}
+          ${!lista.length ? `<button type="button" class="btn btn-primario" id="btn-nova-pagina">+ Criar uma página</button>`
+            : lista.some((p) => p.status === "rejected") ? `<p class="dica">Edite o pedido recusado seguindo o recado do admin e envie de novo.</p>`
+            : `<p class="dica">Cada conta pode ter uma página.</p>`}
         </div>`;
 
       const area = painel.querySelector("#area-form-pagina");
@@ -152,7 +150,7 @@ async function iniciar() {
         if (!confirm(p.status === "pending" ? "Cancelar o pedido desta página?" : `Apagar a página "${p.name}" com todas as publicações? Não dá para desfazer.`)) return;
         try { await apagarPagina(p.id); toast("Pronto"); render.minhas(); } catch (e) { toast(e.message); }
       }));
-      if (params.get("criar") === "1" && !temPendente && ativas < 3) { params.delete("criar"); abrirForm(); }
+      if (params.get("criar") === "1" && !lista.length) { params.delete("criar"); abrirForm(); }
     },
   };
 

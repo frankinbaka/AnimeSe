@@ -6,7 +6,10 @@
 import { esc, toast, entrar, caixaErro } from "./ui.js";
 import { tempoAtras } from "./comunidade.js";
 import { usuarioAtual } from "./store.js";
-import { curtir, apagarPublicacao, enviarImagem, pedirPagina, editarPagina, limparSlug, publicacoes, minhasCurtidas, POR_VEZ } from "./paginas-dados.js";
+import {
+  curtir, republicar, apagarPublicacao, enviarImagem, pedirPagina, editarPagina, limparSlug,
+  publicacoes, minhasCurtidas, minhasRepublicacoes, POR_VEZ,
+} from "./paginas-dados.js";
 
 /** Foto da página (ou a inicial do nome). */
 export function avatarPagina(p, classe = "") {
@@ -22,10 +25,11 @@ function textoComLinks(texto = "") {
     `<a href="${url}" target="_blank" rel="noopener nofollow ugc">${url.replace(/^https?:\/\//, "").slice(0, 60)}${url.length > 68 ? "…" : ""}</a>`);
 }
 
-export function cardPublicacao(post, { curtido = false, podeApagar = false } = {}) {
+export function cardPublicacao(post, { curtido = false, republicado = false, podeApagar = false, rotulo = "" } = {}) {
   const p = post.pagina;
   return `
     <article class="publicacao" data-post="${post.id}">
+      ${rotulo ? `<p class="publicacao-rotulo"><span aria-hidden="true">🔁</span> ${rotulo}</p>` : ""}
       <header class="publicacao-topo">
         <a href="pagina.html?p=${esc(p.slug)}" class="publicacao-autor">
           ${avatarPagina(p)}
@@ -38,6 +42,10 @@ export function cardPublicacao(post, { curtido = false, podeApagar = false } = {
       <footer class="publicacao-acoes">
         <button type="button" class="btn-curtir" data-curtir="${post.id}" aria-pressed="${curtido}" aria-label="${curtido ? "Descurtir" : "Curtir"}">
           <span aria-hidden="true">${curtido ? "♥" : "♡"}</span> <span class="n-curtidas">${post.likes_count || 0}</span>
+        </button>
+        <button type="button" class="btn-curtir btn-republicar" data-republicar="${post.id}" aria-pressed="${republicado}"
+                aria-label="${republicado ? "Desfazer republicação" : "Republicar no seu perfil"}" title="${republicado ? "Desfazer republicação" : "Republicar no seu perfil"}">
+          <span aria-hidden="true">🔁</span> <span class="n-republicacoes">${post.reposts_count || 0}</span>
         </button>
       </footer>
     </article>`;
@@ -52,6 +60,27 @@ export function ligarPublicacoes(container, { obterPost, aoApagar = () => {} }) 
     const bCurtir = e.target.closest("[data-curtir]");
     const bApagar = e.target.closest("[data-apagar-post]");
     const bImagem = e.target.closest("[data-ampliar]");
+    const bRepublicar = e.target.closest("[data-republicar]");
+
+    if (bRepublicar) {
+      if (!(await usuarioAtual())) { toast("Entre com sua conta para republicar"); return entrar(); }
+      const ligar = bRepublicar.getAttribute("aria-pressed") !== "true";
+      const n = bRepublicar.querySelector(".n-republicacoes");
+      const pintar = (on) => {
+        bRepublicar.setAttribute("aria-pressed", String(on));
+        const rotulo = on ? "Desfazer republicação" : "Republicar no seu perfil";
+        bRepublicar.setAttribute("aria-label", rotulo);
+        bRepublicar.title = rotulo;
+        n.textContent = Math.max(0, Number(n.textContent) + (on ? 1 : -1));
+      };
+      pintar(ligar);
+      bRepublicar.disabled = true;
+      try {
+        await republicar(Number(bRepublicar.dataset.republicar), ligar);
+        toast(ligar ? "Republicado no seu perfil" : "Republicação desfeita");
+      } catch (err) { pintar(!ligar); toast(err.message); }
+      bRepublicar.disabled = false;
+    }
 
     if (bCurtir) {
       if (!(await usuarioAtual())) { toast("Entre com sua conta para curtir"); return entrar(); }
@@ -200,11 +229,12 @@ export async function listaDePublicacoes(container, { paginas = null, eu = null,
     botaoMais.disabled = true;
     try {
       const novos = await publicacoes({ paginas, antesDe: ultimo });
-      const curtidas = await minhasCurtidas(novos.map((p) => p.id));
+      const ids = novos.map((p) => p.id);
+      const [curtidas, republicadas] = await Promise.all([minhasCurtidas(ids), minhasRepublicacoes(ids)]);
       if (primeiraVez) { lista.innerHTML = novos.length ? "" : vazio(); primeiraVez = false; }
       lista.insertAdjacentHTML("beforeend", novos.map((p) => {
         posts.set(p.id, p);
-        return cardPublicacao(p, { curtido: curtidas.has(p.id), podeApagar: souAdmin || p.pagina.owner_id === eu?.id });
+        return cardPublicacao(p, { curtido: curtidas.has(p.id), republicado: republicadas.has(p.id), podeApagar: souAdmin || p.pagina.owner_id === eu?.id });
       }).join(""));
       if (novos.length) ultimo = novos[novos.length - 1].created_at;
       botaoMais.hidden = novos.length < POR_VEZ;
