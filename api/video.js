@@ -19,6 +19,13 @@ module.exports = async function handler(req, res) {
   if (!provedor) return res.status(400).json({ erro: "Link de vídeo não suportado." });
 
   try {
+    if (/tiktok\.com/i.test(url)) {
+      const t = await formatoTikTok(url);
+      if (t) {
+        res.setHeader("Cache-Control", "public, s-maxage=86400, stale-while-revalidate=604800");
+        return res.status(200).json(t);
+      }
+    }
     const resp = await fetch(provedor.oembed + encodeURIComponent(url), { headers: { "User-Agent": "AnimeSe/1.0" } });
     if (!resp.ok) throw new Error(String(resp.status));
     const d = await resp.json();
@@ -32,3 +39,32 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ largura: null, altura: null, capa: null });
   }
 };
+
+/**
+ * O oEmbed do TikTok não informa o formato real (sempre 325x578).
+ * Lê os dados que a própria página do vídeo traz (largura, altura e capa).
+ */
+async function formatoTikTok(url) {
+  try {
+    const resp = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36",
+        "Accept-Language": "pt-BR,pt;q=0.9",
+      },
+      redirect: "follow",
+    });
+    if (!resp.ok) return null;
+    const html = await resp.text();
+    const id = (url.match(/video\/(\d+)/) || resp.url.match(/video\/(\d+)/) || [])[1];
+    // Trecho do JSON da página a partir do vídeo pedido
+    const inicio = id ? html.indexOf(`"id":"${id}"`) : -1;
+    const trecho = html.slice(inicio >= 0 ? inicio : 0, (inicio >= 0 ? inicio : 0) + 20000);
+    const m = trecho.match(/"video":\{[^{}]*?"height":(\d+),"width":(\d+)/) || trecho.match(/"width":(\d+),"height":(\d+)/);
+    if (!m) return null;
+    const [altura, largura] = /"height":\d+,"width"/.test(m[0]) ? [Number(m[1]), Number(m[2])] : [Number(m[2]), Number(m[1])];
+    const capa = (trecho.match(/"cover":"([^"]+)"/) || [])[1];
+    return { largura, altura, capa: capa ? JSON.parse(`"${capa}"`) : null };
+  } catch {
+    return null;
+  }
+}
