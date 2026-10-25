@@ -1303,3 +1303,9 @@ h3 { font-size: 1.05rem; }
 :root:not([data-tema="escuro"]) .btn-tema svg { fill: currentColor; stroke: none; }
 :root[data-tema="escuro"] .btn-tema { color: #f7d774; }
 :root[data-tema="escuro"] .selo-admin { background: #2a3566; }
+
+/* Evita o "pulo" ao carregar: reserva o espaço do cabeçalho e do menu do usuário */
+#site-header:empty { display: block; height: 64px; background: var(--indigo); }
+:root[data-tema="escuro"] #site-header:empty { height: 65px; }
+.menu-usuario:empty { min-width: 150px; }
+@media (max-width: 860px) { .menu-usuario:empty { min-width: 40px; } }

@@ -20,7 +20,7 @@ export const nomeStatus = (id) => STATUS.find((s) => s.id === id)?.nome || id;
 
 let supabase = null;
 if (!MODO_DEMO) {
-  const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
+  const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/+esm");
   supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 

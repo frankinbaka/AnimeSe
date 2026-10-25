@@ -15,6 +15,14 @@ let db, eu, souAdmin;
 let raiz, lista, campo, contadorNaoLidas, contadorOnline;
 let carregado = false;
 let naoLidas = 0;
+// Conexão em tempo real só enquanto o chat está aberto (economiza
+// conexões do Supabase). Fechado, as não lidas são contadas de tempos em tempos.
+let canal = null;
+let timerDesligar = null;
+let timerContagem = null;
+const ESPERA_DESLIGAR = 20_000;      // depois de fechar o chat
+const ESPERA_ABA_ESCONDIDA = 60_000; // aba em segundo plano com o chat aberto
+const INTERVALO_CONTAGEM = 90_000;   // checagem de mensagens novas com o chat fechado
 const autores = new Map();
 const mostradas = new Set();
 
@@ -32,10 +40,29 @@ export async function iniciarChat(usuario, perfil) {
   if (perfil) autores.set(usuario.id, { id: usuario.id, nickname: perfil.nick, tag: perfil.tag, avatar_url: perfil.avatar, supporter_until: perfil.apoiadorAte, role: perfil.papel });
 
   montarBalao();
-  await contarNaoLidas();
-  ouvirTempoReal();
+  document.addEventListener("visibilitychange", aoTrocarVisibilidade);
   if (ler(CHAVE_ABERTO, sessionStorage) === "1") abrir();
+  else { await contarNaoLidas(); iniciarContagem(); }
 }
+
+const estaAberto = () => raiz.classList.contains("aberto");
+
+function aoTrocarVisibilidade() {
+  clearTimeout(timerDesligar);
+  if (document.visibilityState === "hidden") {
+    pararContagem();
+    if (canal) timerDesligar = setTimeout(desconectar, ESPERA_ABA_ESCONDIDA);
+    return;
+  }
+  if (estaAberto()) conectar();
+  else { contarNaoLidas(); iniciarContagem(); }
+}
+
+function iniciarContagem() {
+  pararContagem();
+  timerContagem = setInterval(() => { if (document.visibilityState === "visible") contarNaoLidas(); }, INTERVALO_CONTAGEM);
+}
+const pararContagem = () => clearInterval(timerContagem);
 
 // ------------------------------------------------------------
 // Interface
@@ -97,7 +124,11 @@ async function abrir() {
   document.getElementById("chat-painel").hidden = false;
   document.getElementById("chat-botao").setAttribute("aria-expanded", "true");
   gravar(CHAVE_ABERTO, "1", sessionStorage);
+  clearTimeout(timerDesligar);
+  pararContagem();
   if (!carregado) await carregarHistorico();
+  else await buscarNovas();
+  conectar();
   marcarComoLidas();
   rolarParaFim();
   campo.focus();
@@ -108,6 +139,9 @@ function fechar() {
   document.getElementById("chat-painel").hidden = true;
   document.getElementById("chat-botao").setAttribute("aria-expanded", "false");
   gravar(CHAVE_ABERTO, "0", sessionStorage);
+  clearTimeout(timerDesligar);
+  timerDesligar = setTimeout(desconectar, ESPERA_DESLIGAR);
+  iniciarContagem();
 }
 
 // ------------------------------------------------------------
@@ -189,6 +223,20 @@ function removerMensagem(id) {
   }
 }
 
+/** Mensagens que chegaram enquanto o chat estava desconectado. */
+async function buscarNovas() {
+  const ultimas = lista.querySelectorAll(".chat-msg");
+  const ultima = ultimas[ultimas.length - 1]?.dataset.quando;
+  if (!ultima) return carregarHistorico();
+  const { data } = await db.from("chat_messages").select("id, user_id, body, created_at")
+    .gt("created_at", ultima).order("created_at", { ascending: true }).limit(LIMITE_HISTORICO);
+  if (!data?.length) return;
+  await buscarAutores(data.map((m) => m.user_id));
+  const estavaNoFim = pertoDoFim();
+  data.forEach(adicionarMensagem);
+  if (estavaNoFim) rolarParaFim();
+}
+
 const pertoDoFim = () => lista.scrollHeight - lista.scrollTop - lista.clientHeight < 80;
 const rolarParaFim = () => { lista.scrollTop = lista.scrollHeight; };
 
@@ -215,8 +263,11 @@ async function enviar() {
 // ------------------------------------------------------------
 // Tempo real, pessoas online e não lidas
 // ------------------------------------------------------------
-function ouvirTempoReal() {
-  const canal = db.channel("chat-geral", { config: { presence: { key: eu.id } } });
+function conectar() {
+  clearTimeout(timerDesligar);
+  if (canal) return;
+  canal = db.channel("chat-geral", { config: { presence: { key: eu.id } } });
+  const este = canal;
   canal
     .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, async ({ new: m }) => {
       if (mostradas.has(m.id)) return;
@@ -231,13 +282,24 @@ function ouvirTempoReal() {
       if (old?.id) removerMensagem(old.id);
     })
     .on("presence", { event: "sync" }, () => {
-      const n = Object.keys(canal.presenceState()).length;
-      contadorOnline.textContent = `${n} ${n === 1 ? "pessoa" : "pessoas"} online`;
+      const n = Object.keys(este.presenceState()).length;
+      contadorOnline.textContent = n === 1 ? "Só você no chat agora" : `${n} pessoas no chat agora`;
     })
     .subscribe(async (status) => {
-      if (status === "SUBSCRIBED") await canal.track({ entrou: new Date().toISOString() });
+      if (status === "SUBSCRIBED") {
+        await este.track({ entrou: new Date().toISOString() });
+        // Pega o que chegou entre a última busca e a conexão
+        if (carregado) buscarNovas();
+      }
       if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") contadorOnline.textContent = "Reconectando…";
     });
+}
+
+function desconectar() {
+  if (!canal) return;
+  db.removeChannel(canal);
+  canal = null;
+  contadorOnline.textContent = "Conectando…";
 }
 
 async function contarNaoLidas() {

@@ -10,11 +10,17 @@
 //   2. senão, com o tradutor público do Google (gratuito e sem chave,
 //      mas não oficial: pode ficar indisponível ou limitar acessos).
 //
-// O resultado fica 30 dias no cache da CDN da Vercel, então cada
-// sinopse é traduzida poucas vezes, não a cada visita.
+// Cada sinopse traduzida fica guardada para sempre no Supabase
+// (tabela synopses_pt, etapa 11), então é traduzida uma única vez.
+// Para gravar lá, a função precisa da variável SUPABASE_SERVICE_ROLE_KEY
+// na Vercel; sem ela, só lê o que já existe e continua funcionando.
+// Além disso, a resposta fica 30 dias no cache da CDN da Vercel.
 // ============================================================
 
 const MAL = "https://api.myanimelist.net/v2/anime/";
+// Endereço e chave pública do Supabase (os mesmos de js/config.js)
+const SUPABASE_URL = process.env.SUPABASE_URL || "https://nfcobuqwpphswostlyks.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mY29idXF3cHBoc3dvc3RseWtzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4MjczOTQsImV4cCI6MjEwODQwMzM5NH0.vXO-YMlzidCzSrkOJ1uy3FzteacY4pPfBpta9rIs4oo";
 
 module.exports = async function handler(req, res) {
   const id = String(req.query.id || "");
@@ -24,6 +30,11 @@ module.exports = async function handler(req, res) {
   if (!clientId) return res.status(500).json({ erro: "A chave do MyAnimeList não está configurada." });
 
   try {
+    // 1. Já traduzida antes? (ou corrigida pelo admin)
+    const salva = await lerSalva(id);
+    const podeMelhorar = salva && salva.tradutor === "google" && !salva.revisado && process.env.DEEPL_API_KEY && process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (salva && !podeMelhorar) return responder(res, salva.texto, salva.tradutor);
+
     const resp = await fetch(`${MAL}${id}?fields=synopsis`, { headers: { "X-MAL-CLIENT-ID": clientId } });
     if (!resp.ok) return res.status(resp.status === 404 ? 404 : 502).json({ erro: "Não foi possível buscar a sinopse." });
     const { synopsis } = await resp.json();
@@ -34,17 +45,56 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ sinopse: "", tradutor: null });
     }
 
-    const tradutor = process.env.DEEPL_API_KEY ? "deepl" : "google";
-    const traduzido = tradutor === "deepl" ? await traduzirDeepL(texto) : await traduzirGoogle(texto);
+    // 2. Traduz (DeepL; se falhar, Google)
+    let traduzido, tradutor;
+    if (process.env.DEEPL_API_KEY) traduzido = await traduzirDeepL(texto);
+    if (traduzido) tradutor = "deepl";
+    else if (podeMelhorar) return responder(res, salva.texto, salva.tradutor); // DeepL falhou: fica a do Google
+    else { traduzido = await traduzirGoogle(texto); tradutor = "google"; }
     const sinopse = fonte ? `${traduzido}\n\n(Fonte: ${fonte})` : traduzido;
 
-    res.setHeader("Cache-Control", "public, s-maxage=2592000, stale-while-revalidate=604800");
-    return res.status(200).json({ sinopse, tradutor });
+    // 3. Guarda para as próximas visitas
+    await salvar(id, sinopse, tradutor);
+    return responder(res, sinopse, tradutor);
   } catch (e) {
     res.setHeader("Cache-Control", "no-store");
     return res.status(502).json({ erro: "A tradução está indisponível no momento." });
   }
 };
+
+function responder(res, sinopse, tradutor) {
+  res.setHeader("Cache-Control", "public, s-maxage=2592000, stale-while-revalidate=604800");
+  return res.status(200).json({ sinopse, tradutor });
+}
+
+async function lerSalva(id) {
+  try {
+    const chave = process.env.SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/synopses_pt?mal_id=eq.${id}&select=texto,tradutor,revisado`, {
+      headers: { apikey: chave, Authorization: `Bearer ${chave}` },
+    });
+    if (!resp.ok) return null; // tabela ainda não criada: segue traduzindo
+    const [linha] = await resp.json();
+    return linha?.texto ? linha : null;
+  } catch {
+    return null;
+  }
+}
+
+async function salvar(id, texto, tradutor) {
+  const chave = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!chave) return;
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/synopses_pt?on_conflict=mal_id`, {
+      method: "POST",
+      headers: {
+        apikey: chave, Authorization: `Bearer ${chave}`, "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates,return=minimal",
+      },
+      body: JSON.stringify({ mal_id: Number(id), texto, tradutor, atualizado: new Date().toISOString() }),
+    });
+  } catch {}
+}
 
 /** Tira o "[Written by MAL Rewrite]" e separa o "(Source: X)" do texto. */
 function separarFonte(original) {
@@ -67,12 +117,10 @@ async function traduzirDeepL(texto) {
     headers: { Authorization: `DeepL-Auth-Key ${chave}`, "Content-Type": "application/json" },
     body: JSON.stringify({ text: [texto], source_lang: "EN", target_lang: "PT-BR" }),
   });
-  if (!resp.ok) {
-    // Se o DeepL falhar (cota esgotada, chave errada), tenta o Google
-    return traduzirGoogle(texto);
-  }
+  // Se o DeepL falhar (cota esgotada, chave errada), devolve null e quem chamou usa o Google
+  if (!resp.ok) return null;
   const json = await resp.json();
-  return json.translations?.[0]?.text || texto;
+  return json.translations?.[0]?.text || null;
 }
 
 async function traduzirGoogle(texto) {

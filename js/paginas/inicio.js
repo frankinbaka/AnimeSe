@@ -11,7 +11,7 @@ await montarLayout();
 const grade = document.getElementById("grade-temporada");
 const faixaTop = document.getElementById("faixa-top");
 const faixaProx = document.getElementById("faixa-proximos");
-grade.innerHTML = esqueletos(12);
+grade.innerHTML = esqueletos(18);
 faixaTop.innerHTML = esqueletos(8);
 faixaProx.innerHTML = esqueletos(8);
 
