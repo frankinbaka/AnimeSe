@@ -9,6 +9,8 @@ import {
 } from "../perfis.js";
 import { videosDoFeedDe, republicadosPor } from "../feed.js";
 import { FEED_ATIVO } from "../config.js";
+import { contagem, euSigo, seguir, listaSocial } from "../social.js";
+import { toast, entrar } from "../ui.js";
 
 await montarLayout();
 
@@ -33,14 +35,17 @@ async function mostrar(p) {
   document.title = `${nome} — AnimeSe`;
   const souEu = eu?.id === p.id;
 
-  const [lista, avaliacoes, comentarios, sugestoes, doFeed, republicados] = await Promise.all([
+  const [lista, avaliacoes, comentarios, sugestoes, doFeed, republicados, social, sigo] = await Promise.all([
     listaDoUsuario(p.id).catch(() => []),
     avaliacoesDoUsuario(p.id).catch(() => []),
     comentariosDoUsuario(p.id).catch(() => []),
     sugestoesDoUsuario(p.id).catch(() => []),
     FEED_ATIVO ? videosDoFeedDe(p.id).catch(() => []) : [],
     FEED_ATIVO ? republicadosPor(p.id).catch(() => []) : [],
+    contagem(p.id),
+    euSigo(p.id).catch(() => false),
   ]);
+  let seguidores = social.seguidores;
 
   const redes = Object.keys(REDES).filter((r) => p[`${r}_url`]);
   const videos = (p.creator_videos || []).map(videoIncorporavel).filter(Boolean);
@@ -56,6 +61,8 @@ async function mostrar(p) {
     { id: "sugestoes", nome: "Sugestões", total: sugestoes.length },
     ...(criador ? [{ id: "videos", nome: "Vídeos", total: videos.length + doFeed.length }] : []),
     ...(FEED_ATIVO ? [{ id: "republicados", nome: "Republicados", total: republicados.length }] : []),
+    { id: "seguidores", nome: "Seguidores", total: seguidores },
+    { id: "seguindo", nome: "Seguindo", total: social.seguindo },
   ];
 
   alvo.innerHTML = `
@@ -74,7 +81,8 @@ async function mostrar(p) {
           <div class="perfil-redes">
             ${redes.map((r) => `<a class="rede rede-${r}" href="${esc(p[`${r}_url`])}" target="_blank" rel="noopener nofollow">${REDES[r].nome}</a>`).join("")}
           </div>` : ""}
-        ${souEu ? `<a class="btn btn-contorno btn-editar-perfil" href="perfil.html">Editar meu perfil</a>` : ""}
+        ${souEu ? `<a class="btn btn-contorno btn-editar-perfil" href="perfil.html">Editar meu perfil</a>`
+                : `<button type="button" class="btn ${sigo ? "btn-contorno" : "btn-primario"} btn-seguir" id="btn-seguir" aria-pressed="${sigo}">${sigo ? "Seguindo" : "Seguir"}</button>`}
       </div>
       ${p.favorite_mal_id ? `
         <a class="perfil-favorito" href="anime.html?id=${p.favorite_mal_id}">
@@ -84,10 +92,10 @@ async function mostrar(p) {
     </header>
 
     <ul class="perfil-numeros">
-      <li><strong>${formatarNumero(assistidos)}</strong><span>já assistidos</span></li>
-      <li><strong>${formatarNumero(comentarios.length)}</strong><span>comentários</span></li>
-      <li><strong>${formatarNumero(avaliacoes.length)}</strong><span>avaliações</span></li>
-      <li><strong>${formatarNumero(sugestoes.length)}</strong><span>sugestões</span></li>
+      <li><button type="button" data-ir="seguidores"><strong id="num-seguidores">${formatarNumero(seguidores)}</strong><span>${seguidores === 1 ? "seguidor" : "seguidores"}</span></button></li>
+      <li><button type="button" data-ir="seguindo"><strong>${formatarNumero(social.seguindo)}</strong><span>seguindo</span></button></li>
+      <li><button type="button" data-ir="lista"><strong>${formatarNumero(assistidos)}</strong><span>já assistidos</span></button></li>
+      <li><button type="button" data-ir="avaliacoes"><strong>${formatarNumero(avaliacoes.length)}</strong><span>avaliações</span></button></li>
     </ul>
 
     <div class="abas" role="tablist" id="abas-perfil">
@@ -99,7 +107,22 @@ async function mostrar(p) {
   const vazio = (texto) => `<p class="vazio">${texto}</p>`;
   const pronome = souEu ? "Você" : nome;
 
+  // Lista de pessoas (seguidores ou seguindo)
+  const listaPessoas = async (tipo) => {
+    painel.innerHTML = `<p class="secao-descricao">Carregando…</p>`;
+    const pessoas = await listaSocial(p.id, tipo).catch(() => []);
+    painel.innerHTML = pessoas.length
+      ? `<ul class="lista-pessoas">${pessoas.map((u) => {
+          const n = u.nickname || u.display_name?.split(" ")[0] || "Usuário";
+          return `<li><a href="usuario.html?id=${u.id}">${avatarHtml(u.avatar_url, n, temSeloApoiador(u.supporter_until))}
+            <span>${nomeComTag(n, u.tag, u.favorite_title)}</span></a></li>`;
+        }).join("")}</ul>`
+      : vazio(tipo === "seguidores" ? `${souEu ? "Você ainda não tem" : `${esc(nome)} ainda não tem`} seguidores.` : `${pronome} ainda não segue ninguém.`);
+  };
+
   const render = {
+    seguidores() { listaPessoas("seguidores"); },
+    seguindo() { listaPessoas("seguindo"); },
     lista() {
       painel.innerHTML = assistidosLista.length
         ? `<div class="grade">${assistidosLista.map((a) => cardAnime(a)).join("")}</div>`
@@ -180,5 +203,30 @@ async function mostrar(p) {
     render[id]();
   };
   abasEl.addEventListener("click", (e) => { const a = e.target.closest(".aba"); if (a) abrir(a.dataset.aba); });
+  alvo.querySelectorAll("[data-ir]").forEach((b) => b.addEventListener("click", () => {
+    abrir(b.dataset.ir);
+    abasEl.scrollIntoView({ behavior: "smooth", block: "start" });
+  }));
+
+  // Seguir / deixar de seguir
+  alvo.querySelector("#btn-seguir")?.addEventListener("click", async (e) => {
+    const botao = e.currentTarget;
+    if (!eu) { toast("Entre com sua conta Google para seguir pessoas"); return entrar(); }
+    const seguindoAgora = botao.getAttribute("aria-pressed") === "true";
+    botao.disabled = true;
+    try {
+      await seguir(p.id, !seguindoAgora);
+      seguidores += seguindoAgora ? -1 : 1;
+      botao.setAttribute("aria-pressed", String(!seguindoAgora));
+      botao.textContent = seguindoAgora ? "Seguir" : "Seguindo";
+      botao.classList.toggle("btn-primario", seguindoAgora);
+      botao.classList.toggle("btn-contorno", !seguindoAgora);
+      alvo.querySelector("#num-seguidores").textContent = formatarNumero(seguidores);
+      const contadorAba = abasEl.querySelector('[data-aba="seguidores"] .contador');
+      if (contadorAba) contadorAba.textContent = seguidores;
+      toast(seguindoAgora ? `Você deixou de seguir ${nome}` : `Agora você segue ${nome}`);
+    } catch (err) { toast(err.message); }
+    botao.disabled = false;
+  });
   abrir(params.get("aba") || "lista");
 }

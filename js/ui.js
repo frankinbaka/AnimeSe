@@ -108,7 +108,8 @@ export function toast(msg) {
 const LINKS = [
   { href: "index.html", texto: "Início" },
   ...(FEED_ATIVO ? [{ href: "feed.html", texto: "Feed" }] : []),
-  { href: "buscar.html", texto: "Buscar" },
+  // Só aparece no celular/tablet, onde a barra de busca do topo fica escondida
+  { href: "buscar.html", texto: "Buscar", classe: "nav-buscar" },
   { href: "sortear.html", texto: "O que assistir?" },
   { href: "comunidade.html", texto: "Comunidade" },
   { href: "lista.html", texto: "Minha lista" },
@@ -216,6 +217,11 @@ async function montarMenuUsuario() {
     </div>`;
 
   if (perfil?.papel === "admin") avisarPedidosAdmin(alvo);
+
+  // Chat geral flutuante (só para quem tem conta)
+  if (!MODO_DEMO && !document.body.classList.contains("pagina-feed")) {
+    import("./chat.js").then((m) => m.iniciarChat(usuario, perfil)).catch(() => {});
+  }
 
   const botao = alvo.querySelector("#btn-menu-usuario");
   const menu = alvo.querySelector(".menu-dropdown");

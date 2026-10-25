@@ -5,6 +5,7 @@ import { montarLayout, caixaErro, esc, formatarNota, formatarNumero, toast, entr
 import { detalhes, traduzirStatus, nomeTemporada, sinopseEmPortugues, temporadasDoAnime } from "../mal.js";
 import { usuarioAtual, lerPerfil, statusNaLista, definirStatus, removerDaLista, STATUS, nomeStatus } from "../store.js";
 import { linkPerfil } from "../perfis.js";
+import { amigosNoAnime } from "../social.js";
 import {
   COMUNIDADE_ATIVA, NOTAS, nomeAutor, tempoAtras, estatisticas, avaliacoesDoAnime, salvarAvaliacao,
   excluirAvaliacao, meusLikes, curtir, descurtir, responder, excluirResposta,
@@ -28,6 +29,7 @@ if (!id || !/^\d+$/.test(id)) {
     alvo.innerHTML = montarPagina(anime);
     carregarSinopse(anime);
     carregarTemporadas(anime);
+    if (COMUNIDADE_ATIVA && usuario) mostrarAmigos(anime);
     await montarPainelLista(anime);
     if (COMUNIDADE_ATIVA) montarAvaliacoes(anime); // carrega também as sugestões
   } catch (e) {
@@ -63,6 +65,7 @@ function montarPagina(a) {
         </ul>
         ${a.generos.length ? `<div class="generos">${a.generos.map((g) => `<span class="genero">${esc(g)}</span>`).join("")}</div>` : ""}
         <div class="painel-lista" id="painel-lista"></div>
+        <div id="amigos-anime"></div>
         <h2>Sinopse</h2>
         <p class="sinopse" id="sinopse" aria-busy="true">Carregando sinopse em português…</p>
         <p class="anime-titulo-alt">
@@ -142,6 +145,40 @@ async function carregarTemporadas(anime) {
         </section>`).join("")}
     </div>`;
   caixa.hidden = false;
+}
+
+// ------------------------------------------------------------
+// Quem você segue já assistiu ou avaliou este anime
+// ------------------------------------------------------------
+async function mostrarAmigos(anime) {
+  const caixa = document.getElementById("amigos-anime");
+  const dados = await amigosNoAnime(anime.id).catch(() => null);
+  if (!dados || (!dados.assistiram.length && !dados.avaliaram.length)) return;
+
+  const nomeDe = (p) => p.nickname || p.display_name?.split(" ")[0] || "Usuário";
+  const pessoa = (p, extra = "") => `
+    <a class="amigo" href="usuario.html?id=${p.id}" title="${esc(nomeDe(p))}">
+      ${avatarHtml(p.avatar_url, nomeDe(p), temSeloApoiador(p.supporter_until))}
+      <span>${esc(nomeDe(p))}${extra}</span>
+    </a>`;
+
+  // Quem avaliou já aparece com a nota; não repete em "já assistiram"
+  const avaliaramIds = new Set(dados.avaliaram.map((a) => a.perfil.id));
+  const soAssistiram = dados.assistiram.filter((p) => !avaliaramIds.has(p.id));
+
+  caixa.innerHTML = `
+    <section class="amigos-anime" aria-label="Pessoas que você segue">
+      ${dados.avaliaram.length ? `
+        <div class="amigos-grupo">
+          <h2>Quem você segue avaliou</h2>
+          <div class="amigos-lista">${dados.avaliaram.map((a) => pessoa(a.perfil, ` <strong class="nota-amigo">★ ${a.nota}</strong>`)).join("")}</div>
+        </div>` : ""}
+      ${soAssistiram.length ? `
+        <div class="amigos-grupo">
+          <h2>Quem você segue já assistiu</h2>
+          <div class="amigos-lista">${soAssistiram.map((p) => pessoa(p)).join("")}</div>
+        </div>` : ""}
+    </section>`;
 }
 
 // ------------------------------------------------------------
