@@ -133,8 +133,10 @@ export async function montarLayout() {
         <label class="sr-only" for="busca-topo">Buscar anime</label>
         <input id="busca-topo" name="q" type="search" placeholder="Buscar anime…" autocomplete="off">
       </form>
+      <button type="button" class="btn-tema" id="btn-tema"></button>
       <div class="menu-usuario" id="menu-usuario"></div>
     </div>`;
+  ligarBotaoTema(header.querySelector("#btn-tema"));
 
   const toggle = header.querySelector(".menu-toggle");
   const nav = header.querySelector(".nav-principal");
@@ -171,6 +173,32 @@ export async function montarLayout() {
  * Conta a visita para as estatísticas do admin. O navegador recebe um
  * código aleatório só dele (sem nome, e-mail ou IP). Falhas são ignoradas.
  */
+// ------------------------------------------------------------
+// Modo noturno (o tema é aplicado antes no <head> de cada página,
+// para não piscar claro; aqui fica só o botão de trocar)
+// ------------------------------------------------------------
+const ICONE_LUA = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>`;
+const ICONE_SOL = `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg>`;
+
+export const temaAtual = () => (document.documentElement.dataset.tema === "escuro" ? "escuro" : "claro");
+
+function ligarBotaoTema(botao) {
+  const desenhar = () => {
+    const escuro = temaAtual() === "escuro";
+    botao.innerHTML = escuro ? ICONE_SOL : ICONE_LUA;
+    botao.setAttribute("aria-label", escuro ? "Usar modo claro" : "Usar modo noturno");
+    botao.title = escuro ? "Modo claro" : "Modo noturno";
+  };
+  botao.addEventListener("click", () => {
+    const novo = temaAtual() === "escuro" ? "claro" : "escuro";
+    if (novo === "escuro") document.documentElement.dataset.tema = "escuro";
+    else delete document.documentElement.dataset.tema;
+    try { localStorage.setItem("animese:tema", novo); } catch {}
+    desenhar();
+  });
+  desenhar();
+}
+
 // ------------------------------------------------------------
 // Faixas horizontais: setinhas no lugar da barra de rolagem
 // ------------------------------------------------------------
