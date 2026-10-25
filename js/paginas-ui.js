@@ -6,6 +6,7 @@
 import { esc, toast, entrar, caixaErro } from "./ui.js";
 import { tempoAtras } from "./comunidade.js";
 import { usuarioAtual } from "./store.js";
+import { videoIncorporavel, REDES } from "./perfis.js";
 import {
   curtir, republicar, apagarPublicacao, enviarImagem, pedirPagina, editarPagina, limparSlug,
   publicacoes, minhasCurtidas, minhasRepublicacoes, POR_VEZ,
@@ -39,6 +40,7 @@ export function cardPublicacao(post, { curtido = false, republicado = false, pod
       </header>
       ${post.body ? `<p class="publicacao-texto recolhido">${textoComLinks(post.body)}</p>
         <button type="button" class="ver-mais" data-ver-mais hidden>Ver mais</button>` : ""}
+      ${previaVideo(post.body)}
       ${post.image_url ? `<button type="button" class="publicacao-imagem" data-ampliar="${esc(post.image_url)}" aria-label="Ver imagem em tamanho maior"><img src="${esc(post.image_url)}" alt="" loading="lazy"></button>` : ""}
       <footer class="publicacao-acoes">
         <button type="button" class="btn-curtir" data-curtir="${post.id}" aria-pressed="${curtido}" aria-label="${curtido ? "Descurtir" : "Curtir"}">
@@ -62,6 +64,8 @@ export function ligarPublicacoes(container, { obterPost, aoApagar = () => {} }) 
   new MutationObserver(() => marcarTextosLongos(container)).observe(container, { childList: true });
 
   container.addEventListener("click", async (e) => {
+    const bPlay = e.target.closest("[data-play]");
+    if (bPlay) return tocarVideo(bPlay);
     const bVerMais = e.target.closest("[data-ver-mais]");
     if (bVerMais) {
       const texto = bVerMais.previousElementSibling;
@@ -128,6 +132,40 @@ export function ligarPublicacoes(container, { obterPost, aoApagar = () => {} }) 
 
     if (bImagem) ampliarImagem(bImagem.dataset.ampliar);
   });
+}
+
+/**
+ * Primeiro link de vídeo (YouTube, TikTok ou Instagram) do texto vira uma prévia.
+ * O player só carrega ao clicar em play: a página continua leve.
+ */
+function previaVideo(texto = "") {
+  const links = (texto || "").match(/https?:\/\/[^\s<]+/g) || [];
+  for (const link of links) {
+    const v = videoIncorporavel(link.replace(/[.,;:!?)\]'"]+$/, ""));
+    if (!v) continue;
+    const idYoutube = v.rede === "youtube" ? v.embed.split("/embed/")[1] : null;
+    const capa = idYoutube ? `<img src="https://i.ytimg.com/vi/${idYoutube}/hqdefault.jpg" alt="" loading="lazy" onerror="this.remove()">` : "";
+    return `
+      <div class="publicacao-video ${v.vertical ? "vertical" : ""} rede-${v.rede}">
+        <button type="button" class="video-play" data-play="${esc(v.embed)}" data-rede="${v.rede}" aria-label="Assistir vídeo do ${REDES[v.rede].nome} aqui">
+          ${capa}
+          <span class="video-play-icone" aria-hidden="true">▶</span>
+          ${capa ? "" : `<span class="video-play-rede">Vídeo do ${REDES[v.rede].nome}</span>`}
+        </button>
+      </div>`;
+  }
+  return "";
+}
+
+function tocarVideo(botao) {
+  const { play: embed, rede } = botao.dataset;
+  const extra = rede === "youtube" ? "?autoplay=1&rel=0&playsinline=1" : rede === "tiktok" ? "&autoplay=1" : "";
+  const iframe = document.createElement("iframe");
+  iframe.src = embed + extra;
+  iframe.title = `Vídeo do ${REDES[rede]?.nome || "vídeo"}`;
+  iframe.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen; clipboard-write";
+  iframe.allowFullscreen = true;
+  botao.replaceWith(iframe);
 }
 
 /** Mostra "Ver mais" só nos textos que passam do limite. */

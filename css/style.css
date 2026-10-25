@@ -1464,3 +1464,22 @@ h3 { font-size: 1.05rem; }
 }
 .ver-mais:hover { text-decoration: underline; }
 .ver-mais[hidden] { display: none; }
+
+/* Prévia de vídeo nas publicações (YouTube, TikTok, Instagram) */
+.publicacao-video { margin: 12px 0 0; border-radius: var(--raio-md); overflow: hidden; background: #000; aspect-ratio: 16 / 9; }
+.publicacao-video.vertical { aspect-ratio: 9 / 16; max-width: 340px; max-height: 620px; }
+.publicacao-video iframe { display: block; width: 100%; height: 100%; border: 0; }
+.video-play {
+  position: relative; display: grid; place-items: center; width: 100%; height: 100%;
+  border: 0; padding: 0; cursor: pointer; background: linear-gradient(135deg, #1a2240, #3b2a5c); color: #fff;
+}
+.video-play img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.video-play-icone {
+  position: relative; width: 68px; height: 48px; border-radius: 14px; display: grid; place-items: center;
+  background: rgba(0,0,0,.72); font-size: 1.4rem; padding-left: 4px; transition: background .15s, transform .15s;
+}
+.rede-youtube .video-play:hover .video-play-icone { background: #e62117; }
+.rede-tiktok .video-play:hover .video-play-icone { background: #fe2c55; }
+.rede-instagram .video-play:hover .video-play-icone { background: #c13584; }
+.video-play:hover .video-play-icone { transform: scale(1.06); }
+.video-play-rede { position: absolute; bottom: 14px; left: 0; right: 0; text-align: center; font-weight: 700; font-size: .9rem; opacity: .85; }
