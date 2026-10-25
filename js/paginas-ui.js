@@ -70,7 +70,8 @@ export function cardPublicacao(post, { curtido = false, republicado = false, pod
 export function ligarPublicacoes(container, { obterPost, aoApagar = () => {} }) {
   // Textos longos aparecem recolhidos, com "Ver mais"
   marcarTextosLongos(container);
-  new MutationObserver(() => marcarTextosLongos(container)).observe(container, { childList: true });
+  ajustarVideos(container);
+  new MutationObserver(() => { marcarTextosLongos(container); ajustarVideos(container); }).observe(container, { childList: true });
 
   container.addEventListener("click", async (e) => {
     const bPlay = e.target.closest("[data-play]");
@@ -173,7 +174,7 @@ function previaVideo(texto = "") {
     const idYoutube = v.rede === "youtube" ? v.embed.split("/embed/")[1] : null;
     const capa = idYoutube ? `<img src="https://i.ytimg.com/vi/${idYoutube}/hqdefault.jpg" alt="" loading="lazy" onerror="this.remove()">` : "";
     return { link: limpo, html: `
-      <div class="publicacao-video ${v.vertical ? "vertical" : ""} rede-${v.rede}">
+      <div class="publicacao-video ${v.vertical ? "vertical" : ""} rede-${v.rede}" ${v.rede !== "instagram" ? `data-formato="${esc(limpo)}"` : ""}>
         <button type="button" class="video-play" data-play="${esc(v.embed)}" data-rede="${v.rede}" aria-label="Assistir vídeo do ${REDES[v.rede].nome} aqui">
           ${capa}
           <span class="video-play-icone" aria-hidden="true">▶</span>
@@ -182,6 +183,39 @@ function previaVideo(texto = "") {
       </div>` };
   }
   return { link: null, html: "" };
+}
+
+/**
+ * Descobre o formato real do vídeo (deitado ou em pé) e a capa do TikTok,
+ * para a prévia aparecer como o vídeo foi publicado.
+ */
+const formatos = new Map();
+async function formatoDoVideo(url) {
+  if (formatos.has(url)) return formatos.get(url);
+  const chave = "animese:video:" + url;
+  let dados = null;
+  try { dados = JSON.parse(sessionStorage.getItem(chave)); } catch {}
+  const promessa = dados ? Promise.resolve(dados)
+    : fetch(`/api/video?url=${encodeURIComponent(url)}`).then((r) => r.json()).catch(() => ({}))
+        .then((d) => { try { sessionStorage.setItem(chave, JSON.stringify(d)); } catch {} return d; });
+  formatos.set(url, promessa);
+  return promessa;
+}
+
+function ajustarVideos(container) {
+  container.querySelectorAll(".publicacao-video[data-formato]:not([data-ajustado])").forEach(async (caixa) => {
+    caixa.dataset.ajustado = "1";
+    const { largura, altura, capa } = await formatoDoVideo(caixa.dataset.formato);
+    if (largura && altura) {
+      caixa.classList.toggle("vertical", altura > largura);
+      caixa.style.aspectRatio = `${largura} / ${altura}`;
+    }
+    const botao = caixa.querySelector(".video-play");
+    if (capa && botao && !botao.querySelector("img")) {
+      botao.insertAdjacentHTML("afterbegin", `<img src="${esc(capa)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`);
+      botao.querySelector(".video-play-rede")?.remove();
+    }
+  });
 }
 
 function fecharMenus() {
