@@ -1193,3 +1193,42 @@ h3 { font-size: 1.05rem; }
 
 /* Link "Buscar" do menu: a barra de busca do topo já cumpre esse papel no PC */
 @media (min-width: 1181px) { .nav-principal .nav-buscar { display: none; } }
+
+/* ---------- Franquias agrupadas na lista (etapa 10) ---------- */
+.card-franquia .poster { overflow: visible; }
+.card-franquia .poster img { border-radius: var(--raio-md); position: relative; z-index: 2; }
+.card-franquia:hover .poster img { transform: translateY(-3px); }
+/* "pilha" de capas atrás, para indicar que há vários títulos */
+.card-franquia .poster::before, .card-franquia .poster::after {
+  content: ""; position: absolute; inset: 0; border-radius: var(--raio-md);
+  background: var(--borda); box-shadow: 0 2px 6px rgba(26,34,64,.18);
+}
+.card-franquia .poster::before { transform: translate(7px, -7px) rotate(3deg); background: #c9d1ea; z-index: 0; }
+.card-franquia .poster::after  { transform: translate(3.5px, -3.5px) rotate(1.5deg); background: #dde3f3; z-index: 1; }
+.card-franquia .poster .nota, .card-franquia .poster .status-pill, .qtd-franquia { z-index: 3; }
+.qtd-franquia {
+  position: absolute; right: 8px; top: 8px;
+  background: var(--sakura); color: #fff; font-weight: 700; font-size: .78rem;
+  padding: 2px 9px; border-radius: 999px; box-shadow: 0 2px 6px rgba(0,0,0,.25);
+}
+
+.dialogo-franquia { position: relative; width: min(560px, calc(100vw - 32px)); max-height: min(80vh, 720px); overflow: auto; }
+.dialogo-franquia h2 { margin: 0 32px 4px 0; }
+.fechar-dialogo {
+  position: absolute; right: 14px; top: 12px; width: 34px; height: 34px; border: 0; border-radius: 50%;
+  background: var(--ceu, #eef1fb); font-size: 1.4rem; line-height: 1; cursor: pointer; color: var(--tinta);
+}
+.lista-franquia { display: grid; gap: 8px; }
+.item-franquia {
+  display: grid; grid-template-columns: 48px 1fr auto; gap: 12px; align-items: center;
+  padding: 8px; border-radius: var(--raio-sm); text-decoration: none; color: inherit; border: 1px solid var(--borda);
+}
+.item-franquia:hover { background: var(--ceu, #eef1fb); }
+.item-franquia img { width: 48px; height: 68px; object-fit: cover; border-radius: 6px; }
+.item-franquia strong { display: block; font-size: .95rem; }
+.item-franquia small { color: var(--tinta-suave); }
+.item-franquia .status-pill { position: static; }
+.item-franquia.fora-da-lista { opacity: .62; border-style: dashed; }
+.item-franquia.fora-da-lista:hover { opacity: 1; }
+.em-breve { font-size: .75rem; font-weight: 700; color: var(--sakura); }
+.titulo-franquia-resto { font-size: 1rem; margin: 20px 0 8px; }

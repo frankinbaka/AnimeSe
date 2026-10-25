@@ -11,6 +11,7 @@ import { videosDoFeedDe, republicadosPor } from "../feed.js";
 import { FEED_ATIVO } from "../config.js";
 import { contagem, euSigo, seguir, listaSocial } from "../social.js";
 import { toast, entrar } from "../ui.js";
+import { completarFranquias, agrupar, cardGrupo, ligarGrupos } from "../franquias.js";
 
 await montarLayout();
 
@@ -104,6 +105,15 @@ async function mostrar(p) {
     <div id="painel-perfil" role="tabpanel"></div>`;
 
   const painel = alvo.querySelector("#painel-perfil");
+  // Assistidos agrupados por franquia (temporadas e filmes num card só)
+  let grupos = agrupar(assistidosLista);
+  ligarGrupos(painel, () => grupos, { pronome: souEu ? "Você" : nome });
+  if (assistidosLista.some((a) => !a.franquia)) {
+    completarFranquias(assistidosLista, souEu ? p.id : null).then(() => {
+      grupos = agrupar(assistidosLista);
+      if (abasEl.querySelector('[data-aba="lista"]')?.getAttribute("aria-selected") === "true") render.lista();
+    }).catch(() => {});
+  }
   const vazio = (texto) => `<p class="vazio">${texto}</p>`;
   const pronome = souEu ? "Você" : nome;
 
@@ -125,7 +135,7 @@ async function mostrar(p) {
     seguindo() { listaPessoas("seguindo"); },
     lista() {
       painel.innerHTML = assistidosLista.length
-        ? `<div class="grade">${assistidosLista.map((a) => cardAnime(a)).join("")}</div>`
+        ? `<div class="grade">${grupos.map((g, i) => cardGrupo(g, i)).join("")}</div>`
         : vazio(`${pronome} ainda não marcou nenhum anime como já assistido.`);
     },
     avaliacoes() {

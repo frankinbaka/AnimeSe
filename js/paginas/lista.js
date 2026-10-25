@@ -1,6 +1,7 @@
 // Minha lista: animes do usuário separados por status.
 import { montarLayout, cardAnime, caixaErro, entrar } from "../ui.js";
 import { usuarioAtual, lerLista, STATUS } from "../store.js";
+import { completarFranquias, agrupar, cardGrupo, ligarGrupos } from "../franquias.js";
 
 await montarLayout();
 
@@ -45,12 +46,20 @@ function montarAbas(lista) {
     <div class="grade" id="grade-lista" role="tabpanel"></div>`;
 
   const grade = alvo.querySelector("#grade-lista");
+  // Temporadas, filmes e OVAs do mesmo anime ficam num card só
+  let grupos = [];
+  ligarGrupos(grade, () => grupos, { mostrarStatus: true });
   const mostrar = () => {
     const itens = ativa === "todos" ? lista : lista.filter((a) => a.status === ativa);
-    grade.innerHTML = itens.length
-      ? itens.map((a) => cardAnime(a, { status: a.status })).join("")
+    grupos = agrupar(itens);
+    grade.innerHTML = grupos.length
+      ? grupos.map((g, i) => cardGrupo(g, i, { mostrarStatus: true })).join("")
       : `<p class="vazio" style="grid-column:1/-1">Nenhum anime com esse status ainda.</p>`;
   };
+  // Itens antigos ainda sem franquia: descobre em segundo plano e reagrupa
+  if (lista.some((a) => !a.franquia)) {
+    completarFranquias(lista, usuario.id).then(mostrar).catch(() => {});
+  }
 
   alvo.querySelectorAll(".aba").forEach((b) =>
     b.addEventListener("click", () => {

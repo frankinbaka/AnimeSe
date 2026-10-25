@@ -165,14 +165,14 @@ export async function lerLista() {
 
   const { data, error } = await supabase
     .from("anime_list")
-    .select("mal_id, title, image_url, episodes, score, status, updated_at")
+    .select("*")
     .eq("user_id", u.id)
     .order("updated_at", { ascending: false });
   if (error) throw error;
 
   return data.map((r) => ({
     id: r.mal_id, titulo: r.title, imagem: r.image_url, episodios: r.episodes,
-    nota: r.score, status: r.status, atualizado: r.updated_at,
+    nota: r.score, status: r.status, atualizado: r.updated_at, franquia: r.franchise_id || null,
   }));
 }
 
@@ -205,13 +205,22 @@ export async function definirStatus(anime, status) {
     return;
   }
 
-  const { error } = await supabase.from("anime_list").upsert(
-    {
-      user_id: u.id, mal_id: anime.id, title: anime.titulo, image_url: anime.imagem,
-      episodes: anime.episodios, score: anime.nota, status, updated_at: item.atualizado,
-    },
-    { onConflict: "user_id,mal_id" }
-  );
+  // Franquia (etapa 10): agrupa temporadas e filmes no mesmo card da lista
+  let franquia = anime.franquia || null;
+  if (!franquia) {
+    const { franquiaDe } = await import("./franquias.js");
+    franquia = await Promise.race([franquiaDe(anime.id), new Promise((ok) => setTimeout(() => ok(null), 4000))]);
+  }
+  const linha = {
+    user_id: u.id, mal_id: anime.id, title: anime.titulo, image_url: anime.imagem,
+    episodes: anime.episodios, score: anime.nota, status, updated_at: item.atualizado,
+  };
+  let { error } = await supabase.from("anime_list").upsert(
+    franquia ? { ...linha, franchise_id: franquia } : linha, { onConflict: "user_id,mal_id" });
+  // Banco sem a coluna ainda (SQL da etapa 10 não rodado): salva sem ela
+  if (error && /franchise_id/.test(error.message)) {
+    ({ error } = await supabase.from("anime_list").upsert(linha, { onConflict: "user_id,mal_id" }));
+  }
   if (error) throw error;
 }
 

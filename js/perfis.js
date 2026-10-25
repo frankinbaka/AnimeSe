@@ -39,11 +39,11 @@ export async function perfilPublico({ id, nick }) {
 export async function listaDoUsuario(userId) {
   const { data, error } = await db()
     .from("anime_list")
-    .select("mal_id, title, image_url, episodes, score, status, updated_at")
+    .select("*")
     .eq("user_id", userId)
     .order("updated_at", { ascending: false });
   if (error) throw new Error(error.message);
-  return data.map((r) => ({ id: r.mal_id, titulo: r.title, imagem: r.image_url, episodios: r.episodes, nota: r.score, status: r.status }));
+  return data.map((r) => ({ id: r.mal_id, titulo: r.title, imagem: r.image_url, episodios: r.episodes, nota: r.score, status: r.status, franquia: r.franchise_id || null }));
 }
 
 export async function avaliacoesDoUsuario(userId) {
