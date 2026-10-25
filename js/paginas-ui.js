@@ -192,11 +192,11 @@ function previaVideo(texto = "") {
 const formatos = new Map();
 async function formatoDoVideo(url) {
   if (formatos.has(url)) return formatos.get(url);
-  const chave = "animese:video:" + url;
+  const chave = "animese:video2:" + url;
   let dados = null;
   try { dados = JSON.parse(sessionStorage.getItem(chave)); } catch {}
   const promessa = dados ? Promise.resolve(dados)
-    : fetch(`/api/video?url=${encodeURIComponent(url)}`).then((r) => r.json()).catch(() => ({}))
+    : fetch(`/api/video?v=2&url=${encodeURIComponent(url)}`).then((r) => r.json()).catch(() => ({}))
         .then((d) => { try { sessionStorage.setItem(chave, JSON.stringify(d)); } catch {} return d; });
   formatos.set(url, promessa);
   return promessa;
