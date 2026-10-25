@@ -28,6 +28,9 @@ function textoComLinks(texto = "") {
 
 export function cardPublicacao(post, { curtido = false, republicado = false, podeApagar = false, rotulo = "" } = {}) {
   const p = post.pagina;
+  // O link do vídeo some do texto: fica só a prévia com play
+  const video = previaVideo(post.body);
+  const texto = video.link ? post.body.replace(video.link, "").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim() : post.body;
   return `
     <article class="publicacao" data-post="${post.id}">
       ${rotulo ? `<p class="publicacao-rotulo"><span aria-hidden="true">🔁</span> ${rotulo}</p>` : ""}
@@ -38,9 +41,9 @@ export function cardPublicacao(post, { curtido = false, republicado = false, pod
         </a>
         ${podeApagar ? `<button type="button" class="publicacao-apagar" data-apagar-post="${post.id}" aria-label="Apagar publicação" title="Apagar publicação">×</button>` : ""}
       </header>
-      ${post.body ? `<p class="publicacao-texto recolhido">${textoComLinks(post.body)}</p>
+      ${texto ? `<p class="publicacao-texto recolhido">${textoComLinks(texto)}</p>
         <button type="button" class="ver-mais" data-ver-mais hidden>Ver mais</button>` : ""}
-      ${previaVideo(post.body)}
+      ${video.html}
       ${post.image_url ? `<button type="button" class="publicacao-imagem" data-ampliar="${esc(post.image_url)}" aria-label="Ver imagem em tamanho maior"><img src="${esc(post.image_url)}" alt="" loading="lazy"></button>` : ""}
       <footer class="publicacao-acoes">
         <button type="button" class="btn-curtir" data-curtir="${post.id}" aria-pressed="${curtido}" aria-label="${curtido ? "Descurtir" : "Curtir"}">
@@ -141,20 +144,21 @@ export function ligarPublicacoes(container, { obterPost, aoApagar = () => {} }) 
 function previaVideo(texto = "") {
   const links = (texto || "").match(/https?:\/\/[^\s<]+/g) || [];
   for (const link of links) {
-    const v = videoIncorporavel(link.replace(/[.,;:!?)\]'"]+$/, ""));
+    const limpo = link.replace(/[.,;:!?)\]'"]+$/, "");
+    const v = videoIncorporavel(limpo);
     if (!v) continue;
     const idYoutube = v.rede === "youtube" ? v.embed.split("/embed/")[1] : null;
     const capa = idYoutube ? `<img src="https://i.ytimg.com/vi/${idYoutube}/hqdefault.jpg" alt="" loading="lazy" onerror="this.remove()">` : "";
-    return `
+    return { link: limpo, html: `
       <div class="publicacao-video ${v.vertical ? "vertical" : ""} rede-${v.rede}">
         <button type="button" class="video-play" data-play="${esc(v.embed)}" data-rede="${v.rede}" aria-label="Assistir vídeo do ${REDES[v.rede].nome} aqui">
           ${capa}
           <span class="video-play-icone" aria-hidden="true">▶</span>
           ${capa ? "" : `<span class="video-play-rede">Vídeo do ${REDES[v.rede].nome}</span>`}
         </button>
-      </div>`;
+      </div>` };
   }
-  return "";
+  return { link: null, html: "" };
 }
 
 function tocarVideo(botao) {
