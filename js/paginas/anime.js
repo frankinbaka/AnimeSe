@@ -3,7 +3,7 @@
 // sugestões de quem recomenda o anime.
 import { montarLayout, caixaErro, esc, formatarNota, formatarNumero, toast, entrar, nomeComTag, avatarHtml } from "../ui.js";
 import { detalhes, traduzirStatus, nomeTemporada, sinopseEmPortugues, temporadasDoAnime } from "../mal.js";
-import { usuarioAtual, statusNaLista, definirStatus, removerDaLista, STATUS, nomeStatus } from "../store.js";
+import { usuarioAtual, lerPerfil, statusNaLista, definirStatus, removerDaLista, STATUS, nomeStatus } from "../store.js";
 import { linkPerfil } from "../perfis.js";
 import {
   COMUNIDADE_ATIVA, NOTAS, nomeAutor, tempoAtras, estatisticas, avaliacoesDoAnime, salvarAvaliacao,
@@ -16,6 +16,8 @@ await montarLayout();
 const alvo = document.getElementById("conteudo-anime");
 const id = new URLSearchParams(location.search).get("id");
 const usuario = await usuarioAtual();
+// O admin pode apagar avaliações e respostas de qualquer pessoa (moderação)
+const souAdmin = usuario ? (await lerPerfil().catch(() => null))?.papel === "admin" : false;
 
 if (!id || !/^\d+$/.test(id)) {
   alvo.innerHTML = `<div class="vazio"><h2>Anime não informado</h2><p><a href="buscar.html">Buscar um anime</a></p></div>`;
@@ -402,6 +404,7 @@ function cartaoAvaliacao(r, curtidas) {
         ${usuario ? `<button class="btn-texto" type="button" data-acao="responder">Responder</button>` : ""}
         ${minha ? `<button class="btn-texto" type="button" data-acao="editar">Editar</button>
                    <button class="btn-texto perigo" type="button" data-acao="excluir">Excluir</button>` : ""}
+        ${!minha && souAdmin ? `<button class="btn-texto perigo" type="button" data-acao="excluir" data-moderacao="1" title="Moderação: apagar a avaliação desta pessoa">Remover (admin)</button>` : ""}
       </footer>
       ${r.respostas?.length || usuario ? `
         <div class="respostas">
@@ -412,7 +415,8 @@ function cartaoAvaliacao(r, curtidas) {
                 <div class="linha-autor">
                   ${nomeComTag(nomeAutor(resp.autor), resp.autor?.tag, resp.autor?.favorite_title, linkPerfil(resp.autor))}
                   <span class="data">${tempoAtras(resp.created_at)}</span>
-                  ${usuario && resp.user_id === usuario.id ? `<button class="btn-texto perigo" type="button" data-acao="excluir-resposta">Excluir</button>` : ""}
+                  ${usuario && resp.user_id === usuario.id ? `<button class="btn-texto perigo" type="button" data-acao="excluir-resposta">Excluir</button>`
+                    : souAdmin ? `<button class="btn-texto perigo" type="button" data-acao="excluir-resposta" data-moderacao="1">Remover (admin)</button>` : ""}
                 </div>
                 <p>${esc(resp.body)}</p>
               </div>
@@ -476,7 +480,9 @@ function ligarEventosAvaliacoes(anime, secao) {
         break;
       }
       case "excluir":
-        if (!confirm("Excluir sua avaliação? As respostas e likes dela também serão apagados.")) return;
+        if (!confirm(botao.dataset.moderacao
+          ? "Remover a avaliação desta pessoa? As respostas e likes dela também serão apagados. Não dá para desfazer."
+          : "Excluir sua avaliação? As respostas e likes dela também serão apagados.")) return;
         try {
           await excluirAvaliacao(reviewId);
           toast("Avaliação excluída");
@@ -485,7 +491,7 @@ function ligarEventosAvaliacoes(anime, secao) {
         break;
       case "excluir-resposta": {
         const respostaId = Number(botao.closest(".resposta").dataset.resposta);
-        if (!confirm("Excluir sua resposta?")) return;
+        if (!confirm(botao.dataset.moderacao ? "Remover a resposta desta pessoa? Não dá para desfazer." : "Excluir sua resposta?")) return;
         try {
           await excluirResposta(respostaId);
           botao.closest(".resposta").remove();
