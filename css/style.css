@@ -1232,3 +1232,24 @@ h3 { font-size: 1.05rem; }
 .item-franquia.fora-da-lista:hover { opacity: 1; }
 .em-breve { font-size: .75rem; font-weight: 700; color: var(--sakura); }
 .titulo-franquia-resto { font-size: 1rem; margin: 20px 0 8px; }
+
+/* ---------- Faixas com setinhas (no lugar da barra de rolagem) ---------- */
+.faixa-caixa { position: relative; }
+.faixa { scrollbar-width: none; scroll-behavior: smooth; }
+.faixa::-webkit-scrollbar { display: none; }
+.faixa-seta {
+  position: absolute; top: 84px; z-index: 4;
+  width: 44px; height: 44px; border-radius: 50%; border: 0; cursor: pointer;
+  display: grid; place-items: center;
+  background: rgba(255,255,255,.95); color: var(--tinta);
+  box-shadow: 0 4px 14px rgba(26,34,64,.25);
+  transition: transform .15s, background .15s, opacity .15s;
+}
+.faixa-seta:hover { transform: scale(1.08); background: #fff; }
+.faixa-seta svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.faixa-seta-esq { left: -18px; }
+.faixa-seta-dir { right: -18px; }
+.faixa-seta[hidden] { display: none; }
+/* No celular a faixa é arrastada com o dedo; as setas só atrapalhariam */
+@media (hover: none) and (pointer: coarse) { .faixa-seta { display: none; } }
+@media (max-width: 640px) { .faixa-seta-esq { left: 4px; } .faixa-seta-dir { right: 4px; } }

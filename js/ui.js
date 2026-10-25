@@ -164,12 +164,51 @@ export async function montarLayout() {
 
   await montarMenuUsuario();
   registrarVisita();
+  ativarFaixas();
 }
 
 /**
  * Conta a visita para as estatísticas do admin. O navegador recebe um
  * código aleatório só dele (sem nome, e-mail ou IP). Falhas são ignoradas.
  */
+// ------------------------------------------------------------
+// Faixas horizontais: setinhas no lugar da barra de rolagem
+// ------------------------------------------------------------
+export function ativarFaixas(raiz = document) {
+  raiz.querySelectorAll(".faixa:not([data-setas])").forEach((faixa) => {
+    faixa.dataset.setas = "1";
+    const caixa = document.createElement("div");
+    caixa.className = "faixa-caixa";
+    faixa.before(caixa);
+    caixa.append(faixa);
+    const seta = (lado, rotulo) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = `faixa-seta faixa-seta-${lado}`;
+      b.setAttribute("aria-label", rotulo);
+      b.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${lado === "esq" ? "M15 5l-7 7 7 7" : "M9 5l7 7-7 7"}"/></svg>`;
+      b.addEventListener("click", () => {
+        // Anda quase uma "tela" de cards por clique
+        const passo = Math.max(faixa.clientWidth * 0.85, 160);
+        faixa.scrollBy({ left: lado === "esq" ? -passo : passo, behavior: "smooth" });
+      });
+      caixa.append(b);
+      return b;
+    };
+    const esq = seta("esq", "Voltar");
+    const dir = seta("dir", "Avançar");
+    const atualizar = () => {
+      const max = faixa.scrollWidth - faixa.clientWidth;
+      esq.hidden = faixa.scrollLeft <= 4;
+      dir.hidden = faixa.scrollLeft >= max - 4;
+    };
+    faixa.addEventListener("scroll", atualizar, { passive: true });
+    new ResizeObserver(atualizar).observe(faixa);
+    new MutationObserver(atualizar).observe(faixa, { childList: true });
+    atualizar();
+  });
+}
+
 function registrarVisita() {
   const db = clienteSupabase();
   if (!db) return;
