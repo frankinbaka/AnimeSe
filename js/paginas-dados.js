@@ -21,7 +21,7 @@ function erroAmigavel(error) {
 }
 
 export const CAMPOS_PAGINA = "id, owner_id, slug, name, description, avatar_url, status, admin_note, followers_count, posts_count, created_at, reviewed_at";
-const CAMPOS_POST = `id, page_id, body, image_url, likes_count, reposts_count, created_at,
+const CAMPOS_POST = `id, page_id, body, image_url, likes_count, reposts_count, created_at, edited_at,
   pagina:pages!page_posts_page_id_fkey(id, slug, name, avatar_url, owner_id)`;
 export const POR_VEZ = 15;
 
@@ -169,6 +169,15 @@ export async function publicar(paginaId, { texto, imagem }) {
     .insert({ page_id: paginaId, author_id: u.id, body: texto?.trim() || null, image_url: imagem || null })
     .select(CAMPOS_POST).single();
   if (error) throw erroAmigavel(error);
+  return data;
+}
+
+export async function editarPublicacao(postId, texto) {
+  const { data, error } = await db().from("page_posts").update({ body: texto?.trim() || null }).eq("id", postId).select(CAMPOS_POST).single();
+  if (error) {
+    if (/publicacao_nao_vazia/.test(error.message)) throw new Error("A publicação não pode ficar vazia.");
+    throw erroAmigavel(error);
+  }
   return data;
 }
 

@@ -1483,3 +1483,28 @@ h3 { font-size: 1.05rem; }
 .rede-instagram .video-play:hover .video-play-icone { background: #c13584; }
 .video-play:hover .video-play-icone { transform: scale(1.06); }
 .video-play-rede { position: absolute; bottom: 14px; left: 0; right: 0; text-align: center; font-weight: 700; font-size: .9rem; opacity: .85; }
+
+/* Menu ⋯ da publicação (editar / apagar) */
+.publicacao-menu { position: relative; }
+.publicacao-mais {
+  border: 0; background: none; color: var(--tinta-suave); font-size: 1.4rem; line-height: 1; cursor: pointer;
+  width: 36px; height: 36px; border-radius: 50%;
+}
+.publicacao-mais:hover, .publicacao-mais[aria-expanded="true"] { background: var(--ceu); color: var(--tinta); }
+.publicacao-opcoes {
+  position: absolute; right: 0; top: 40px; z-index: 5; min-width: 200px; padding: 6px;
+  background: var(--nuvem); border: 1px solid var(--borda); border-radius: var(--raio-md); box-shadow: 0 10px 30px rgba(0,0,0,.2);
+}
+.publicacao-opcoes[hidden] { display: none; }
+.publicacao-opcoes button {
+  display: block; width: 100%; text-align: left; border: 0; background: none; padding: 9px 12px;
+  border-radius: var(--raio-sm); font: inherit; font-weight: 600; color: var(--tinta); cursor: pointer; white-space: nowrap;
+}
+.publicacao-opcoes button:hover { background: var(--ceu); }
+.publicacao-opcoes button.perigo { color: #c4302b; }
+:root[data-tema="escuro"] .publicacao-opcoes button.perigo { color: #f59a9a; }
+.editar-publicacao { margin-top: 12px; }
+.editar-publicacao textarea {
+  width: 100%; font: inherit; padding: 10px 12px; border: 2px solid var(--borda); border-radius: var(--raio-sm);
+  background: var(--campo); color: var(--tinta); resize: vertical;
+}

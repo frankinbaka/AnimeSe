@@ -8,7 +8,7 @@ import { tempoAtras } from "./comunidade.js";
 import { usuarioAtual } from "./store.js";
 import { videoIncorporavel, REDES } from "./perfis.js";
 import {
-  curtir, republicar, apagarPublicacao, enviarImagem, pedirPagina, editarPagina, limparSlug,
+  curtir, republicar, apagarPublicacao, editarPublicacao, enviarImagem, pedirPagina, editarPagina, limparSlug,
   publicacoes, minhasCurtidas, minhasRepublicacoes, POR_VEZ,
 } from "./paginas-dados.js";
 
@@ -26,7 +26,7 @@ function textoComLinks(texto = "") {
     `<a href="${url}" target="_blank" rel="noopener nofollow ugc">${url.replace(/^https?:\/\//, "").slice(0, 60)}${url.length > 68 ? "…" : ""}</a>`);
 }
 
-export function cardPublicacao(post, { curtido = false, republicado = false, podeApagar = false, rotulo = "" } = {}) {
+export function cardPublicacao(post, { curtido = false, republicado = false, podeApagar = false, podeEditar = false, rotulo = "" } = {}) {
   const p = post.pagina;
   // O link do vídeo some do texto: fica só a prévia com play
   const video = previaVideo(post.body);
@@ -37,9 +37,15 @@ export function cardPublicacao(post, { curtido = false, republicado = false, pod
       <header class="publicacao-topo">
         <a href="pagina.html?p=${esc(p.slug)}" class="publicacao-autor">
           ${avatarPagina(p)}
-          <span><strong>${esc(p.name)}</strong><small>@${esc(p.slug)} · <time datetime="${post.created_at}">${tempoAtras(post.created_at)}</time></small></span>
+          <span><strong>${esc(p.name)}</strong><small>@${esc(p.slug)} · <time datetime="${post.created_at}">${tempoAtras(post.created_at)}</time>${post.edited_at ? ` · <span title="Editada ${tempoAtras(post.edited_at)}">editada</span>` : ""}</small></span>
         </a>
-        ${podeApagar ? `<button type="button" class="publicacao-apagar" data-apagar-post="${post.id}" aria-label="Apagar publicação" title="Apagar publicação">×</button>` : ""}
+        ${podeEditar || podeApagar ? `<div class="publicacao-menu">
+          <button type="button" class="publicacao-mais" data-menu-post aria-label="Opções da publicação" aria-expanded="false">⋯</button>
+          <div class="publicacao-opcoes" hidden>
+            ${podeEditar ? `<button type="button" data-editar-post="${post.id}">✏️ Editar texto</button>` : ""}
+            ${podeApagar ? `<button type="button" class="perigo" data-apagar-post="${post.id}">🗑️ Apagar publicação</button>` : ""}
+          </div>
+        </div>` : ""}
       </header>
       ${texto ? `<p class="publicacao-texto recolhido">${textoComLinks(texto)}</p>
         <button type="button" class="ver-mais" data-ver-mais hidden>Ver mais</button>` : ""}
@@ -69,6 +75,22 @@ export function ligarPublicacoes(container, { obterPost, aoApagar = () => {} }) 
   container.addEventListener("click", async (e) => {
     const bPlay = e.target.closest("[data-play]");
     if (bPlay) return tocarVideo(bPlay);
+    const bMenu = e.target.closest("[data-menu-post]");
+    if (bMenu) {
+      const opcoes = bMenu.nextElementSibling;
+      const abrir = opcoes.hidden;
+      fecharMenus();
+      opcoes.hidden = !abrir;
+      bMenu.setAttribute("aria-expanded", String(abrir));
+      return;
+    }
+    const bEditar = e.target.closest("[data-editar-post]");
+    if (bEditar) {
+      fecharMenus();
+      const post = obterPost(Number(bEditar.dataset.editarPost));
+      if (post) abrirEdicao(container, post, obterPost);
+      return;
+    }
     const bVerMais = e.target.closest("[data-ver-mais]");
     if (bVerMais) {
       const texto = bVerMais.previousElementSibling;
@@ -123,6 +145,7 @@ export function ligarPublicacoes(container, { obterPost, aoApagar = () => {} }) 
     }
 
     if (bApagar) {
+      fecharMenus();
       const post = obterPost(Number(bApagar.dataset.apagarPost));
       if (!post || !confirm("Apagar esta publicação? Não dá para desfazer.")) return;
       try {
@@ -159,6 +182,55 @@ function previaVideo(texto = "") {
       </div>` };
   }
   return { link: null, html: "" };
+}
+
+function fecharMenus() {
+  document.querySelectorAll(".publicacao-opcoes:not([hidden])").forEach((m) => {
+    m.hidden = true;
+    m.previousElementSibling?.setAttribute("aria-expanded", "false");
+  });
+}
+document.addEventListener("click", (e) => { if (!e.target.closest(".publicacao-menu")) fecharMenus(); });
+
+/** Troca o texto da publicação por uma caixa de edição. */
+function abrirEdicao(container, post, obterPost) {
+  const card = container.querySelector(`[data-post="${post.id}"]`);
+  if (!card || card.querySelector(".editar-publicacao")) return;
+  const form = document.createElement("form");
+  form.className = "editar-publicacao";
+  form.innerHTML = `
+    <label class="sr-only" for="editar-${post.id}">Texto da publicação</label>
+    <textarea id="editar-${post.id}" rows="5" maxlength="2000"></textarea>
+    <div class="form-acoes">
+      <button type="submit" class="btn btn-primario btn-pequeno">Salvar</button>
+      <button type="button" class="btn btn-contorno btn-pequeno" data-cancelar>Cancelar</button>
+    </div>`;
+  const campo = form.querySelector("textarea");
+  campo.value = post.body || "";
+  card.querySelector(".publicacao-topo").after(form);
+  card.querySelectorAll(".publicacao-texto, .ver-mais").forEach((el) => (el.hidden = true));
+  campo.focus();
+  form.querySelector("[data-cancelar]").addEventListener("click", () => {
+    form.remove();
+    card.querySelectorAll(".publicacao-texto").forEach((el) => (el.hidden = false));
+    card.querySelectorAll(".ver-mais").forEach((el) => (el.hidden = !card.querySelector(".publicacao-texto.recolhido")));
+  });
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const botao = form.querySelector('[type="submit"]');
+    botao.disabled = true;
+    try {
+      const salvo = await editarPublicacao(post.id, campo.value);
+      Object.assign(post, salvo);
+      const curtido = card.querySelector("[data-curtir]")?.getAttribute("aria-pressed") === "true";
+      const republicado = card.querySelector("[data-republicar]")?.getAttribute("aria-pressed") === "true";
+      const rotulo = card.querySelector(".publicacao-rotulo")?.innerHTML.replace(/^<span[^>]*>🔁<\/span>\s*/, "") || "";
+      const novo = document.createElement("div");
+      novo.innerHTML = cardPublicacao(post, { curtido, republicado, podeApagar: true, podeEditar: true, rotulo });
+      card.replaceWith(novo.firstElementChild);
+      toast("Publicação editada");
+    } catch (err) { toast(err.message); botao.disabled = false; }
+  });
 }
 
 function tocarVideo(botao) {
@@ -302,7 +374,7 @@ export async function listaDePublicacoes(container, { paginas = null, eu = null,
       if (primeiraVez) { lista.innerHTML = novos.length ? "" : vazio(); primeiraVez = false; }
       lista.insertAdjacentHTML("beforeend", novos.map((p) => {
         posts.set(p.id, p);
-        return cardPublicacao(p, { curtido: curtidas.has(p.id), republicado: republicadas.has(p.id), podeApagar: souAdmin || p.pagina.owner_id === eu?.id });
+        return cardPublicacao(p, { curtido: curtidas.has(p.id), republicado: republicadas.has(p.id), podeApagar: souAdmin || p.pagina.owner_id === eu?.id, podeEditar: p.pagina.owner_id === eu?.id });
       }).join(""));
       if (novos.length) ultimo = novos[novos.length - 1].created_at;
       botaoMais.hidden = novos.length < POR_VEZ;
@@ -318,7 +390,7 @@ export async function listaDePublicacoes(container, { paginas = null, eu = null,
     adicionar(post) {
       posts.set(post.id, post);
       lista.querySelector(".vazio")?.remove();
-      lista.insertAdjacentHTML("afterbegin", cardPublicacao(post, { podeApagar: true }));
+      lista.insertAdjacentHTML("afterbegin", cardPublicacao(post, { podeApagar: true, podeEditar: true }));
     },
   };
 }
