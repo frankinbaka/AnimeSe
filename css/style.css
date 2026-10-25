@@ -1448,3 +1448,4 @@ h3 { font-size: 1.05rem; }
   .busca-rapida input { width: 150px; }
 }
 #pagina-publica { max-width: 820px; }
+.btn[hidden], .carregar-mais [hidden] { display: none; }
