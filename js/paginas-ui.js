@@ -37,7 +37,8 @@ export function cardPublicacao(post, { curtido = false, republicado = false, pod
         </a>
         ${podeApagar ? `<button type="button" class="publicacao-apagar" data-apagar-post="${post.id}" aria-label="Apagar publicação" title="Apagar publicação">×</button>` : ""}
       </header>
-      ${post.body ? `<p class="publicacao-texto">${textoComLinks(post.body)}</p>` : ""}
+      ${post.body ? `<p class="publicacao-texto recolhido">${textoComLinks(post.body)}</p>
+        <button type="button" class="ver-mais" data-ver-mais hidden>Ver mais</button>` : ""}
       ${post.image_url ? `<button type="button" class="publicacao-imagem" data-ampliar="${esc(post.image_url)}" aria-label="Ver imagem em tamanho maior"><img src="${esc(post.image_url)}" alt="" loading="lazy"></button>` : ""}
       <footer class="publicacao-acoes">
         <button type="button" class="btn-curtir" data-curtir="${post.id}" aria-pressed="${curtido}" aria-label="${curtido ? "Descurtir" : "Curtir"}">
@@ -56,7 +57,21 @@ export function cardPublicacao(post, { curtido = false, republicado = false, pod
  * obterPost(id) devolve o objeto da publicação; aoApagar(id) é chamado depois de apagar.
  */
 export function ligarPublicacoes(container, { obterPost, aoApagar = () => {} }) {
+  // Textos longos aparecem recolhidos, com "Ver mais"
+  marcarTextosLongos(container);
+  new MutationObserver(() => marcarTextosLongos(container)).observe(container, { childList: true });
+
   container.addEventListener("click", async (e) => {
+    const bVerMais = e.target.closest("[data-ver-mais]");
+    if (bVerMais) {
+      const texto = bVerMais.previousElementSibling;
+      const abrir = texto.classList.contains("recolhido");
+      texto.classList.toggle("recolhido", !abrir);
+      bVerMais.textContent = abrir ? "Ver menos" : "Ver mais";
+      if (!abrir) bVerMais.closest(".publicacao")?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      return;
+    }
+
     const bCurtir = e.target.closest("[data-curtir]");
     const bApagar = e.target.closest("[data-apagar-post]");
     const bImagem = e.target.closest("[data-ampliar]");
@@ -112,6 +127,17 @@ export function ligarPublicacoes(container, { obterPost, aoApagar = () => {} }) 
     }
 
     if (bImagem) ampliarImagem(bImagem.dataset.ampliar);
+  });
+}
+
+/** Mostra "Ver mais" só nos textos que passam do limite. */
+function marcarTextosLongos(container) {
+  requestAnimationFrame(() => {
+    container.querySelectorAll(".publicacao-texto.recolhido:not([data-medido])").forEach((p) => {
+      p.dataset.medido = "1";
+      if (p.scrollHeight > p.clientHeight + 4) p.nextElementSibling.hidden = false;
+      else p.classList.remove("recolhido");
+    });
   });
 }
 
