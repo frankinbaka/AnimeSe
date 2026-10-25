@@ -26,7 +26,7 @@ module.exports = async function handler(req, res) {
         return res.status(200).json(t);
       }
     }
-    const resp = await fetch(provedor.oembed + encodeURIComponent(url), { headers: { "User-Agent": "AnimeSe/1.0" } });
+    const resp = await fetch(provedor.oembed + encodeURIComponent(url), { headers: { "User-Agent": "AnimeSe/1.0" }, signal: AbortSignal.timeout(3000) });
     if (!resp.ok) throw new Error(String(resp.status));
     const d = await resp.json();
     // TikTok informa o tamanho da capa (que segue o formato do vídeo); YouTube, o do player
@@ -52,6 +52,7 @@ async function formatoTikTok(url) {
         "Accept-Language": "pt-BR,pt;q=0.9",
       },
       redirect: "follow",
+      signal: AbortSignal.timeout(5000),
     });
     if (!resp.ok) return null;
     const html = await resp.text();
