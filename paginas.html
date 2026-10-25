@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>try{var t=localStorage.getItem("animese:tema");if(t==="escuro"||(!t&&matchMedia("(prefers-color-scheme: dark)").matches))document.documentElement.dataset.tema="escuro"}catch(e){}</script>
+  <title>Feed — AnimeSe</title>
+  <meta name="description" content="Publicações das páginas da comunidade AnimeSe: notícias, artes e conversas sobre anime.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='16' fill='%23e2457a'/><text x='16' y='22' font-size='17' text-anchor='middle' fill='white'>ア</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header id="site-header"></header>
+  <main>
+    <section class="container feed-paginas" id="feed-paginas">
+      <h1 style="margin-top:32px">Feed</h1>
+      <p class="secao-descricao">Publicações das páginas da comunidade.</p>
+      <div id="conteudo-feed"></div>
+    </section>
+  </main>
+  <footer id="site-footer"></footer>
+  <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
+  <script defer src="/_vercel/insights/script.js"></script>
+  <script type="module" src="js/paginas/paginas.js"></script>
+</body>
+</html>

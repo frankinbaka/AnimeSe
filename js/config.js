@@ -27,3 +27,7 @@ export const FEED_ATIVO = false;
 export const PIX_CHAVE = "60acafaf-f0d8-427d-ab8b-2dbdb53ec061";
 export const PIX_NOME = "Frank Matheus B da Silva";    // como aparece no banco, até 25 letras
 export const PIX_CIDADE = "Caxias";  // até 15 letras
+
+// Liga/desliga as Páginas da comunidade e o feed delas (menu, páginas e
+// aba no painel admin). As páginas e publicações salvas continuam no banco.
+export const PAGINAS_ATIVAS = true;

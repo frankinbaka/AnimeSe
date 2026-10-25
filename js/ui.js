@@ -3,7 +3,7 @@
 // avisos e a tag do anime favorito.
 // ============================================================
 
-import { NOME_DO_SITE, AUTOR_DO_SITE, FEED_ATIVO } from "./config.js";
+import { NOME_DO_SITE, AUTOR_DO_SITE, FEED_ATIVO, PAGINAS_ATIVAS } from "./config.js";
 import { usuarioAtual, lerPerfil, entrarComGoogle, sair, MODO_DEMO, nomeStatus, clienteSupabase } from "./store.js";
 
 /** Escapa texto vindo da API antes de inserir no HTML. */
@@ -107,7 +107,8 @@ export function toast(msg) {
 
 const LINKS = [
   { href: "index.html", texto: "Início" },
-  ...(FEED_ATIVO ? [{ href: "feed.html", texto: "Feed" }] : []),
+  ...(PAGINAS_ATIVAS ? [{ href: "paginas.html", texto: "Feed", tambem: ["pagina.html"] }] : []),
+  ...(FEED_ATIVO ? [{ href: "feed.html", texto: PAGINAS_ATIVAS ? "Vídeos" : "Feed" }] : []),
   // Só aparece no celular/tablet, onde a barra de busca do topo fica escondida
   { href: "buscar.html", texto: "Buscar", classe: "nav-buscar" },
   { href: "sortear.html", texto: "O que assistir?" },
@@ -127,7 +128,7 @@ export async function montarLayout() {
       <button class="menu-toggle" aria-label="Abrir menu" aria-expanded="false">☰</button>
       <a class="logo" href="index.html"><span class="logo-marca" aria-hidden="true">ア</span>${esc(NOME_DO_SITE)}</a>
       <nav class="nav-principal" aria-label="Principal">
-        ${LINKS.map((l) => `<a href="${l.href}" ${l.classe ? `class="${l.classe}"` : ""} ${pagina === l.href ? 'aria-current="page"' : ""}>${l.texto}</a>`).join("")}
+        ${LINKS.map((l) => `<a href="${l.href}" ${l.classe ? `class="${l.classe}"` : ""} ${pagina === l.href || l.tambem?.includes(pagina) ? 'aria-current="page"' : ""}>${l.texto}</a>`).join("")}
       </nav>
       <form class="busca-rapida" action="buscar.html" role="search">
         <label class="sr-only" for="busca-topo">Buscar anime</label>
@@ -277,6 +278,7 @@ async function montarMenuUsuario() {
       <a href="usuario.html?id=${usuario.id}" role="menuitem">Meu perfil público</a>
       <a href="perfil.html" role="menuitem">Editar perfil</a>
       <a href="lista.html" role="menuitem">Minha lista</a>
+      ${PAGINAS_ATIVAS ? `<a href="paginas.html?aba=minhas" role="menuitem">Minhas páginas</a>` : ""}
       <a href="apoiar.html" role="menuitem">Apoiar o AnimeSe ♥</a>
       ${perfil?.papel === "admin" ? `<a href="admin.html" role="menuitem" id="link-admin">Painel admin</a>` : ""}
       <hr>
@@ -306,21 +308,23 @@ async function montarMenuUsuario() {
 async function avisarPedidosAdmin(menu) {
   const db = clienteSupabase();
   if (!db) return;
-  const [pedidos, denuncias, apoios] = await Promise.all([
+  const [pedidos, denuncias, apoios, paginas] = await Promise.all([
     db.rpc("pedidos_criador_pendentes").then((r) => (r.error ? 0 : r.data || 0)),
     FEED_ATIVO ? db.rpc("denuncias_abertas").then((r) => (r.error ? 0 : r.data || 0)) : 0,
     db.rpc("apoios_pendentes").then((r) => (r.error ? 0 : r.data || 0)),
+    PAGINAS_ATIVAS ? db.rpc("paginas_pendentes").then((r) => (r.error ? 0 : r.data || 0)) : 0,
   ]);
-  const n = pedidos + denuncias + apoios;
+  const n = pedidos + denuncias + apoios + paginas;
   if (!n) return;
   const partes = [
     pedidos ? `${pedidos} ${pedidos === 1 ? "pedido de criador" : "pedidos de criador"}` : "",
     denuncias ? `${denuncias} ${denuncias === 1 ? "publicação denunciada" : "publicações denunciadas"}` : "",
     apoios ? `${apoios} ${apoios === 1 ? "apoio para conferir" : "apoios para conferir"}` : "",
+    paginas ? `${paginas} ${paginas === 1 ? "página para aprovar" : "páginas para aprovar"}` : "",
   ].filter(Boolean).join(", ");
   menu.querySelector("#btn-menu-usuario").insertAdjacentHTML("beforeend", `<span class="ponto-alerta" title="${partes}"><span class="sr-only">${partes}</span></span>`);
   const link = menu.querySelector("#link-admin");
-  link.href = `admin.html?aba=${apoios ? "apoios" : denuncias ? "denuncias" : "criadores"}`;
+  link.href = `admin.html?aba=${apoios ? "apoios" : paginas ? "paginas" : denuncias ? "denuncias" : "criadores"}`;
   link.innerHTML = `Painel admin <span class="contador-alerta">${n}</span>`;
   link.title = partes;
 }

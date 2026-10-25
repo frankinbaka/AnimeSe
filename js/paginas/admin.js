@@ -10,7 +10,9 @@ import {
   REDES, videoIncorporavel, contarPedidosCriador, pedidosCriador, criadoresAprovados, avaliarCriador, revogarCriador,
 } from "../perfis.js";
 import { contarDenunciasAbertas, denunciasParaAdmin, resolverDenuncias, MOTIVOS_DENUNCIA } from "../feed.js";
-import { FEED_ATIVO } from "../config.js";
+import { FEED_ATIVO, PAGINAS_ATIVAS } from "../config.js";
+import { paginasParaModerar, moderarPagina, STATUS_PAGINA } from "../paginas-dados.js";
+import { avatarPagina } from "../paginas-ui.js";
 import { contarApoiosPendentes, apoiosParaAdmin, confirmarApoio, recusarApoio } from "../apoio.js";
 
 await montarLayout();
@@ -34,6 +36,8 @@ if (!usuario) {
   });
   atualizarAlertaCriadores();
   atualizarAlertaApoios();
+  if (PAGINAS_ATIVAS) atualizarAlertaPaginas();
+  else abasEl.querySelector('[data-aba="paginas"]')?.remove();
   if (FEED_ATIVO) atualizarAlertaDenuncias();
   else abasEl.querySelector('[data-aba="denuncias"]')?.remove();
   const inicial = new URLSearchParams(location.search).get("aba") || "estatisticas";
@@ -46,6 +50,7 @@ function abrirAba(nome) {
   if (nome === "publicacoes") mostrarPublicacoes();
   else if (nome === "criadores") mostrarCriadores();
   else if (nome === "apoios") mostrarApoios();
+  else if (nome === "paginas" && PAGINAS_ATIVAS) mostrarPaginas();
   else if (nome === "denuncias" && FEED_ATIVO) mostrarDenuncias();
   else mostrarEstatisticas();
 }
@@ -56,7 +61,7 @@ function abrirAba(nome) {
 const NOMES_PAGINAS = {
   "/index.html": "Início", "/anime.html": "Páginas de anime", "/buscar.html": "Buscar",
   "/sortear.html": "O que assistir?", "/comunidade.html": "Comunidade", "/lista.html": "Minha lista",
-  "/perfil.html": "Editar perfil", "/usuario.html": "Perfis públicos", "/feed.html": "Feed", "/novidades.html": "Novidades (antiga)", "/post.html": "Publicações", "/admin.html": "Painel admin",
+  "/perfil.html": "Editar perfil", "/usuario.html": "Perfis públicos", "/feed.html": "Feed de vídeos", "/paginas.html": "Feed das páginas", "/pagina.html": "Páginas da comunidade", "/novidades.html": "Novidades (antiga)", "/post.html": "Publicações", "/admin.html": "Painel admin",
 };
 const nomePagina = (p) => NOMES_PAGINAS[p] || p;
 
@@ -603,6 +608,8 @@ async function mostrarDenuncias() {
       await resolverDenuncias(cartao.dataset.chave, remover);
       toast(remover ? "Publicação removida" : "Publicação mantida e denúncias arquivadas");
       atualizarAlertaApoios();
+  if (PAGINAS_ATIVAS) atualizarAlertaPaginas();
+  else abasEl.querySelector('[data-aba="paginas"]')?.remove();
   if (FEED_ATIVO) atualizarAlertaDenuncias();
   else abasEl.querySelector('[data-aba="denuncias"]')?.remove();
       mostrarDenuncias();
@@ -713,5 +720,81 @@ async function mostrarApoios() {
       toast(err.message);
       cartao.querySelectorAll("button").forEach((x) => (x.disabled = false));
     }
+  }));
+}
+
+
+// ============================================================
+// Páginas da comunidade
+// ============================================================
+async function atualizarAlertaPaginas() {
+  const n = await clienteSupabase().rpc("paginas_pendentes").then((r) => (r.error ? 0 : r.data || 0));
+  const el = document.getElementById("alerta-paginas");
+  el.textContent = n;
+  el.hidden = !n;
+  el.title = `${n} ${n === 1 ? "página aguardando" : "páginas aguardando"} aprovação`;
+}
+
+async function mostrarPaginas() {
+  alvo.innerHTML = `<p class="secao-descricao">Carregando páginas…</p>`;
+  let paginas;
+  try { paginas = await paginasParaModerar(); }
+  catch (e) { alvo.innerHTML = caixaErro(e.message); return; }
+
+  const pendentes = paginas.filter((p) => p.status === "pending");
+  const outras = paginas.filter((p) => p.status !== "pending");
+  const nomeDono = (d) => d?.nickname || d?.display_name?.split(" ")[0] || "Usuário";
+  const linha = (p, pendente) => `
+    <li class="pagina-moderar" data-id="${p.id}">
+      ${avatarPagina(p, "grande")}
+      <div class="pagina-moderar-info">
+        <strong>${esc(p.name)}</strong> <small>@${esc(p.slug)}</small>
+        ${!pendente ? ` <span class="selo selo-pagina-${p.status}">${STATUS_PAGINA[p.status]}</span>` : ""}
+        <p class="dica">Pedida por <a href="usuario.html?id=${p.owner_id}">${esc(nomeDono(p.dono))}</a> em ${new Date(p.created_at).toLocaleDateString("pt-BR")}
+          ${p.status === "approved" ? ` · ${formatarNumero(p.followers_count)} seguidores · ${formatarNumero(p.posts_count)} publicações` : ""}</p>
+        ${p.description ? `<p>${esc(p.description)}</p>` : `<p class="dica">Sem descrição.</p>`}
+        ${p.admin_note ? `<p class="nota-admin">Seu recado: ${esc(p.admin_note)}</p>` : ""}
+      </div>
+      <div class="pagina-moderar-acoes">
+        ${pendente ? `
+          <button type="button" class="btn btn-primario btn-pequeno" data-moderar="approved">Aprovar</button>
+          <button type="button" class="btn btn-contorno btn-pequeno" data-moderar="rejected">Recusar</button>`
+        : p.status === "approved" ? `
+          <a class="btn btn-contorno btn-pequeno" href="pagina.html?p=${esc(p.slug)}">Abrir</a>
+          <button type="button" class="btn-link-perigo" data-moderar="suspended">Suspender</button>`
+        : `<button type="button" class="btn btn-contorno btn-pequeno" data-moderar="approved">${p.status === "suspended" ? "Reativar" : "Aprovar mesmo assim"}</button>`}
+      </div>
+    </li>`;
+
+  alvo.innerHTML = `
+    <div class="painel-admin">
+      <h2>Pedidos de página ${pendentes.length ? `<span class="contador-alerta">${pendentes.length}</span>` : ""}</h2>
+      <p class="secao-descricao">Ao aprovar, a página aparece para todos e o dono já pode publicar. Ao recusar, deixe um recado dizendo o que ajustar.</p>
+      ${pendentes.length ? `<ul class="lista-paginas-moderar">${pendentes.map((p) => linha(p, true)).join("")}</ul>` : `<p class="vazio">Nenhum pedido esperando.</p>`}
+    </div>
+    <div class="painel-admin">
+      <h2>Todas as páginas</h2>
+      ${outras.length ? `<ul class="lista-paginas-moderar">${outras.map((p) => linha(p, false)).join("")}</ul>` : `<p class="vazio">Nenhuma página ainda.</p>`}
+    </div>`;
+
+  alvo.querySelectorAll("[data-moderar]").forEach((b) => b.addEventListener("click", async () => {
+    const id = b.closest("[data-id]").dataset.id;
+    const status = b.dataset.moderar;
+    let nota = "";
+    if (status === "rejected") {
+      nota = prompt("Recado para o dono da página (o que ajustar para aprovar):", "");
+      if (nota === null) return;
+    }
+    if (status === "suspended") {
+      nota = prompt("Motivo da suspensão (o dono vai ver):", "");
+      if (nota === null) return;
+    }
+    b.disabled = true;
+    try {
+      await moderarPagina(id, status, nota);
+      toast({ approved: "Página aprovada", rejected: "Pedido recusado", suspended: "Página suspensa" }[status]);
+      atualizarAlertaPaginas();
+      mostrarPaginas();
+    } catch (e) { toast(e.message); b.disabled = false; }
   }));
 }

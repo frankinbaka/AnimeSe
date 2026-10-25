@@ -12,6 +12,9 @@ import { FEED_ATIVO } from "../config.js";
 import { contagem, euSigo, seguir, listaSocial } from "../social.js";
 import { toast, entrar } from "../ui.js";
 import { completarFranquias, agrupar, cardGrupo, ligarGrupos } from "../franquias.js";
+import { PAGINAS_ATIVAS } from "../config.js";
+import { paginasDoUsuario } from "../paginas-dados.js";
+import { avatarPagina } from "../paginas-ui.js";
 
 await montarLayout();
 
@@ -46,6 +49,7 @@ async function mostrar(p) {
     contagem(p.id),
     euSigo(p.id).catch(() => false),
   ]);
+  const paginasDele = PAGINAS_ATIVAS ? await paginasDoUsuario(p.id).catch(() => []) : [];
   let seguidores = social.seguidores;
 
   const redes = Object.keys(REDES).filter((r) => p[`${r}_url`]);
@@ -82,6 +86,9 @@ async function mostrar(p) {
           <div class="perfil-redes">
             ${redes.map((r) => `<a class="rede rede-${r}" href="${esc(p[`${r}_url`])}" target="_blank" rel="noopener nofollow">${REDES[r].nome}</a>`).join("")}
           </div>` : ""}
+        ${paginasDele.length ? `<div class="perfil-paginas" aria-label="Páginas que administra">
+          ${paginasDele.map((pg) => `<a href="pagina.html?p=${esc(pg.slug)}">${avatarPagina(pg)} ${esc(pg.name)}</a>`).join("")}
+        </div>` : ""}
         ${souEu ? `<a class="btn btn-contorno btn-editar-perfil" href="perfil.html">Editar meu perfil</a>`
                 : `<button type="button" class="btn ${sigo ? "btn-contorno" : "btn-primario"} btn-seguir" id="btn-seguir" aria-pressed="${sigo}">${sigo ? "Seguindo" : "Seguir"}</button>`}
       </div>
