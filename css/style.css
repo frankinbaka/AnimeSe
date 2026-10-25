@@ -1056,3 +1056,56 @@ h3 { font-size: 1.05rem; }
 .foto-perfil { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .btn-foto { width: auto; margin: 0; padding: 6px 14px; font-size: .85rem; }
 #foto-atual.enviando { opacity: .4; animation: pulsar 1s ease-in-out infinite; }
+
+/* ============================================================
+   Apoio via Pix e selo de Apoiador
+   ============================================================ */
+.selo-apoiador { background: linear-gradient(135deg, #f7d774, #e0a526); color: #4a3300; }
+.avatar-apoiador { box-shadow: 0 0 0 3px #e0a526, 0 0 0 5px rgba(224,165,38,.35); }
+.nav-principal a.nav-apoiar { color: #f7b3c9; }
+.nav-principal a.nav-apoiar:hover { color: #fff; background: rgba(226,69,122,.25); }
+.link-apoiar { font-weight: 700; color: var(--sakura-escuro) !important; }
+
+.apoio-topo { margin: 32px 0 24px; max-width: 760px; }
+.apoio-lead { font-size: 1.15rem; color: var(--tinta-suave); margin: 0 0 16px; }
+.apoio-beneficios { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 10px 20px; }
+.apoio-beneficios li { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+.apoio-beneficios li > span[aria-hidden] { color: var(--sakura); }
+.avatar-exemplo { display: inline-block; width: 22px; height: 22px; border-radius: 50%; background: var(--borda); box-shadow: 0 0 0 3px #e0a526; }
+.apoio-colunas { display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; align-items: start; }
+.apoio-passo { background: var(--nuvem); border-radius: var(--raio-md); box-shadow: var(--sombra); padding: 20px; }
+.apoio-passo h2 { display: flex; align-items: center; gap: 10px; font-size: 1.25rem; }
+.passo-num { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--sakura); color: #fff; font-size: 1rem; }
+.valores { border: 0; padding: 0; margin: 0 0 16px; }
+.valores legend { font-weight: 700; margin-bottom: 8px; padding: 0; }
+.campo-outro { margin: 12px 0 0; max-width: 200px; }
+.pix-caixa { display: grid; grid-template-columns: 200px 1fr; gap: 20px; align-items: start; }
+.pix-qr { width: 200px; aspect-ratio: 1; border: 2px solid var(--borda); border-radius: var(--raio-md); display: grid; place-items: center; background: #fff; overflow: hidden; color: var(--tinta-suave); font-size: .85rem; text-align: center; padding: 6px; }
+.pix-qr svg { width: 100%; height: 100%; }
+.pix-codigo p { margin: 0 0 8px; }
+.pix-codigo textarea { width: 100%; font: .78rem/1.4 ui-monospace, monospace; padding: 8px; border: 2px solid var(--borda); border-radius: var(--raio-sm); resize: none; word-break: break-all; margin-bottom: 10px; }
+#form-aviso .btn { margin-bottom: 12px; }
+.lista-apoios { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.lista-apoios li { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; background: var(--ceu); padding: 8px 10px; border-radius: var(--raio-sm); font-size: .92rem; }
+.lista-apoios small { flex-basis: 100%; color: var(--tinta-suave); }
+.selo-recusado { background: #fdecec; color: #8a1c1c; }
+.mural-apoiadores { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 16px; }
+.mural-apoiadores a { display: flex; flex-direction: column; align-items: center; gap: 6px; text-decoration: none; font-weight: 600; font-size: .88rem; width: 84px; text-align: center; }
+.mural-apoiadores .avatar { width: 56px; height: 56px; font-size: 1.4rem; }
+
+.apoio-admin-topo { display: flex; align-items: center; gap: 12px; }
+.apoio-admin-topo > div { display: flex; flex-direction: column; flex: 1; }
+.apoio-valor { font-family: var(--fonte-titulo); font-weight: 400; font-size: 1.6rem; color: #136b45; }
+.apoio-recado { font-style: italic; background: var(--ceu); padding: 8px 12px; border-radius: var(--raio-sm); }
+.select-dias { font: inherit; padding: 8px 10px; border: 2px solid var(--borda); border-radius: var(--raio-sm); }
+
+@media (max-width: 860px) {
+  .apoio-colunas { grid-template-columns: 1fr; }
+  .apoio-topo { text-align: center; }
+  .apoio-beneficios { justify-content: center; }
+}
+@media (max-width: 520px) {
+  .pix-caixa { grid-template-columns: 1fr; justify-items: center; }
+}
+.apoio-passo .campo textarea { width: 100%; font: inherit; padding: 10px 12px; border: 2px solid var(--borda); border-radius: var(--raio-sm); background: #fff; resize: vertical; }
+.apoio-passo .campo textarea:focus { border-color: var(--tinta); outline: none; }

@@ -11,6 +11,7 @@ import {
 } from "../perfis.js";
 import { contarDenunciasAbertas, denunciasParaAdmin, resolverDenuncias, MOTIVOS_DENUNCIA } from "../feed.js";
 import { FEED_ATIVO } from "../config.js";
+import { contarApoiosPendentes, apoiosParaAdmin, confirmarApoio, recusarApoio } from "../apoio.js";
 
 await montarLayout();
 
@@ -32,6 +33,7 @@ if (!usuario) {
     if (aba) abrirAba(aba.dataset.aba);
   });
   atualizarAlertaCriadores();
+  atualizarAlertaApoios();
   if (FEED_ATIVO) atualizarAlertaDenuncias();
   else abasEl.querySelector('[data-aba="denuncias"]')?.remove();
   const inicial = new URLSearchParams(location.search).get("aba") || "estatisticas";
@@ -43,6 +45,7 @@ function abrirAba(nome) {
   history.replaceState(null, "", `admin.html?aba=${nome}`);
   if (nome === "publicacoes") mostrarPublicacoes();
   else if (nome === "criadores") mostrarCriadores();
+  else if (nome === "apoios") mostrarApoios();
   else if (nome === "denuncias" && FEED_ATIVO) mostrarDenuncias();
   else mostrarEstatisticas();
 }
@@ -599,9 +602,113 @@ async function mostrarDenuncias() {
     try {
       await resolverDenuncias(cartao.dataset.chave, remover);
       toast(remover ? "Publicação removida" : "Publicação mantida e denúncias arquivadas");
-      if (FEED_ATIVO) atualizarAlertaDenuncias();
+      atualizarAlertaApoios();
+  if (FEED_ATIVO) atualizarAlertaDenuncias();
   else abasEl.querySelector('[data-aba="denuncias"]')?.remove();
       mostrarDenuncias();
+    } catch (err) {
+      toast(err.message);
+      cartao.querySelectorAll("button").forEach((x) => (x.disabled = false));
+    }
+  }));
+}
+
+// ============================================================
+// Apoios via Pix
+// ============================================================
+async function atualizarAlertaApoios() {
+  const n = await contarApoiosPendentes();
+  const el = document.getElementById("alerta-apoios");
+  el.textContent = n;
+  el.hidden = !n;
+  el.title = `${n} ${n === 1 ? "aviso de apoio" : "avisos de apoio"} para conferir`;
+}
+
+const reais = (v) => Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+async function mostrarApoios() {
+  alvo.innerHTML = `<p class="secao-descricao">Carregando apoios…</p>`;
+  let apoios;
+  try { apoios = await apoiosParaAdmin(); }
+  catch (e) { alvo.innerHTML = caixaErro(e.message); return; }
+
+  const pendentes = apoios.filter((a) => a.status === "pendente");
+  const resolvidos = apoios.filter((a) => a.status !== "pendente").slice(0, 40);
+  const confirmados = apoios.filter((a) => a.status === "confirmado");
+  const total = confirmados.reduce((s, a) => s + Number(a.valor), 0);
+  const mes = new Date(); mes.setDate(1); mes.setHours(0, 0, 0, 0);
+  const doMes = confirmados.filter((a) => new Date(a.resolved_at || a.created_at) >= mes).reduce((s, a) => s + Number(a.valor), 0);
+
+  const linhaUsuario = (a) => {
+    const u = a.usuario;
+    const nome = u ? nomeDo(u) : "Usuário";
+    return `${avatarHtml(u?.avatar_url, nome)}<div>${nomeComTag(nome, u?.tag, "", u ? `usuario.html?id=${u.id}` : null)}
+      <span class="secao-descricao">${dataHora(a.created_at)}</span></div>`;
+  };
+
+  alvo.innerHTML = `
+    <section class="tiles" aria-label="Resumo dos apoios">
+      <div class="tile"><span class="tile-rotulo">Confirmado este mês</span><strong class="tile-valor">${reais(doMes)}</strong></div>
+      <div class="tile"><span class="tile-rotulo">Confirmado no total</span><strong class="tile-valor">${reais(total)}</strong><span class="tile-detalhe">${confirmados.length} ${confirmados.length === 1 ? "apoio" : "apoios"}</span></div>
+      <div class="tile"><span class="tile-rotulo">Aguardando conferência</span><strong class="tile-valor">${pendentes.length}</strong></div>
+    </section>
+
+    <section>
+      <div class="painel-admin-topo">
+        <h2>Para conferir</h2>
+        <span class="secao-descricao">Confira no app do banco se o Pix chegou antes de confirmar.</span>
+      </div>
+      ${pendentes.length ? pendentes.map((a) => `
+        <article class="painel-admin apoio-admin" data-apoio="${a.id}">
+          <header class="apoio-admin-topo">
+            ${linhaUsuario(a)}
+            <strong class="apoio-valor">${reais(a.valor)}</strong>
+          </header>
+          ${a.nome_pagador ? `<p>Nome no comprovante: <strong>${esc(a.nome_pagador)}</strong></p>` : `<p class="secao-descricao">Não informou o nome de quem pagou.</p>`}
+          ${a.mensagem ? `<p class="apoio-recado">“${esc(a.mensagem)}”</p>` : ""}
+          <div class="decisao">
+            <label class="rotulo" for="dias-${a.id}">Duração do selo de Apoiador</label>
+            <select id="dias-${a.id}" class="select-dias">
+              <option value="30">30 dias</option>
+              <option value="365">1 ano</option>
+              <option value="">Para sempre</option>
+            </select>
+            <label class="rotulo" for="motivo-apoio-${a.id}">Motivo, se recusar <span class="opcional">(o usuário vê)</span></label>
+            <textarea id="motivo-apoio-${a.id}" rows="2" maxlength="300" placeholder="Ex.: Não encontrei esse Pix no extrato."></textarea>
+            <div class="acoes-form">
+              <button class="btn btn-primario" type="button" data-decisao-apoio="confirmar">Pix recebido, dar o selo</button>
+              <button class="btn btn-contorno" type="button" data-decisao-apoio="recusar">Não encontrei o Pix</button>
+            </div>
+          </div>
+        </article>`).join("") : `<div class="vazio"><h2>Nada para conferir</h2><p>Quando alguém avisar que fez um Pix, o aviso aparece aqui e no menu da sua foto.</p></div>`}
+    </section>
+
+    ${resolvidos.length ? `
+      <section class="secao">
+        <div class="painel-admin-topo"><h2>Histórico</h2></div>
+        ${tabela(["Apoiador", "Valor", "Situação"], resolvidos.map((a) => [
+          `${esc(a.usuario ? nomeDo(a.usuario) : "Usuário")} <span class="secao-descricao">${dataHora(a.created_at)}</span>`,
+          reais(a.valor),
+          a.status === "confirmado" ? "Confirmado" : `Recusado${a.motivo ? `: ${esc(a.motivo)}` : ""}`,
+        ]))}
+      </section>` : ""}
+    <p class="nota-rodape">O selo é somado: se a pessoa já é Apoiadora e apoia de novo, os dias são acrescentados ao final do selo atual.</p>`;
+
+  alvo.querySelectorAll("[data-decisao-apoio]").forEach((b) => b.addEventListener("click", async () => {
+    const cartao = b.closest(".apoio-admin");
+    const id = Number(cartao.dataset.apoio);
+    cartao.querySelectorAll("button").forEach((x) => (x.disabled = true));
+    try {
+      if (b.dataset.decisaoApoio === "confirmar") {
+        const dias = cartao.querySelector(".select-dias").value;
+        await confirmarApoio(id, dias ? Number(dias) : null);
+        toast("Apoio confirmado: o selo de Apoiador já está no perfil");
+      } else {
+        await recusarApoio(id, cartao.querySelector("textarea").value);
+        toast("Aviso de apoio recusado");
+      }
+      atualizarAlertaApoios();
+      mostrarApoios();
     } catch (err) {
       toast(err.message);
       cartao.querySelectorAll("button").forEach((x) => (x.disabled = false));

@@ -20,3 +20,10 @@ export const AUTOR_DO_SITE = "Frank Matheus";
 // Liga/desliga o Feed de vídeos (página, menu, denúncias e abas do perfil).
 // Os vídeos, curtidas e denúncias já salvos continuam no banco.
 export const FEED_ATIVO = false;
+
+// Pix para a página "Apoiar o AnimeSe". Use uma chave aleatória ou e-mail
+// (a chave fica visível no site). Com algum campo vazio, a página avisa
+// que o Pix ainda não foi configurado.
+export const PIX_CHAVE = "60acafaf-f0d8-427d-ab8b-2dbdb53ec061";
+export const PIX_NOME = "Frank Matheus B da Silva";    // como aparece no banco, até 25 letras
+export const PIX_CIDADE = "Caxias";  // até 15 letras

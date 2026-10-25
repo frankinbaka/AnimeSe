@@ -1,6 +1,6 @@
 // Perfil público de um usuário: lista, avaliações, comentários,
 // sugestões e, para criadores de conteúdo, redes e vídeos.
-import { montarLayout, esc, caixaErro, cardAnime, avatarHtml, nomeComTag, formatarNumero } from "../ui.js";
+import { montarLayout, esc, caixaErro, cardAnime, avatarHtml, nomeComTag, formatarNumero, temSeloApoiador, seloApoiador } from "../ui.js";
 import { usuarioAtual } from "../store.js";
 import { NOTAS, tempoAtras, nomeAutor as nomeAutorFeed } from "../comunidade.js";
 import {
@@ -60,12 +60,13 @@ async function mostrar(p) {
 
   alvo.innerHTML = `
     <header class="perfil-cabecalho">
-      ${avatarHtml(p.avatar_url, nome)}
+      ${avatarHtml(p.avatar_url, nome, temSeloApoiador(p.supporter_until))}
       <div class="perfil-identidade">
         <h1>${nomeComTag(nome, p.tag, p.favorite_title)}</h1>
         <div class="perfil-selos">
           ${p.role === "admin" ? `<span class="selo selo-admin">Admin do AnimeSe</span>` : ""}
           ${criador ? `<span class="selo selo-criador">Criador de conteúdo</span>` : ""}
+          ${temSeloApoiador(p.supporter_until) ? seloApoiador() : ""}
           ${p.created_at ? `<span class="perfil-desde">No AnimeSe desde ${new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date(p.created_at))}</span>` : ""}
         </div>
         ${p.bio ? `<p class="perfil-bio">${esc(p.bio)}</p>` : ""}

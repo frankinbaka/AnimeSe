@@ -120,6 +120,9 @@ export async function lerPerfil() {
     criadorPendente: data?.creator_pending || null,
     criadorPedidoEm: data?.creator_requested_at || null,
     criadorMotivo: data?.creator_note || "",
+    // Apoio (etapa 8)
+    apoiadorAte: data?.supporter_until || null,
+    apoiadorPublico: data?.supporter_public !== false,
   };
 }
 

@@ -44,10 +44,15 @@ export function nomeComTag(nick, tag, favorito = "", href = null) {
     : `<span class="nome-usuario">${esc(nick)}${tagHtml}</span>`;
 }
 
-export function avatarHtml(url, nome = "?") {
-  if (url) return `<img class="avatar" src="${esc(url)}" alt="" referrerpolicy="no-referrer">`;
-  return `<span class="avatar" aria-hidden="true">${esc((nome || "?").trim()[0]?.toUpperCase() || "?")}</span>`;
+export function avatarHtml(url, nome = "?", apoiador = false) {
+  const classe = apoiador ? "avatar avatar-apoiador" : "avatar";
+  if (url) return `<img class="${classe}" src="${esc(url)}" alt="" referrerpolicy="no-referrer">`;
+  return `<span class="${classe}" aria-hidden="true">${esc((nome || "?").trim()[0]?.toUpperCase() || "?")}</span>`;
 }
+
+/** Selo de Apoiador do AnimeSe (para quem tem supporter_until no futuro). */
+export const temSeloApoiador = (dataAte) => Boolean(dataAte && new Date(dataAte) > new Date());
+export const seloApoiador = () => `<span class="selo selo-apoiador" title="Apoia o AnimeSe">Apoiador</span>`;
 
 // ------------------------------------------------------------
 // Cards de anime
@@ -107,6 +112,7 @@ const LINKS = [
   { href: "sortear.html", texto: "O que assistir?" },
   { href: "comunidade.html", texto: "Comunidade" },
   { href: "lista.html", texto: "Minha lista" },
+  { href: "apoiar.html", texto: "Apoiar ♥", classe: "nav-apoiar" },
 ];
 
 export async function montarLayout() {
@@ -120,7 +126,7 @@ export async function montarLayout() {
       <button class="menu-toggle" aria-label="Abrir menu" aria-expanded="false">☰</button>
       <a class="logo" href="index.html"><span class="logo-marca" aria-hidden="true">ア</span>${esc(NOME_DO_SITE)}</a>
       <nav class="nav-principal" aria-label="Principal">
-        ${LINKS.map((l) => `<a href="${l.href}" ${pagina === l.href ? 'aria-current="page"' : ""}>${l.texto}</a>`).join("")}
+        ${LINKS.map((l) => `<a href="${l.href}" ${l.classe ? `class="${l.classe}"` : ""} ${pagina === l.href ? 'aria-current="page"' : ""}>${l.texto}</a>`).join("")}
       </nav>
       <form class="busca-rapida" action="buscar.html" role="search">
         <label class="sr-only" for="busca-topo">Buscar anime</label>
@@ -142,6 +148,7 @@ export async function montarLayout() {
       <p>Dados de animes fornecidos pelo <a href="https://myanimelist.net" target="_blank" rel="noopener">MyAnimeList</a>
       através da API oficial.
       ${esc(NOME_DO_SITE)} não tem ligação oficial com o MyAnimeList.</p>
+      <p><a href="apoiar.html" class="link-apoiar">♥ Apoie o AnimeSe</a>: o site é mantido por um fã, sem anúncios.</p>
       <p class="copyright">© ${new Date().getFullYear()} ${esc(NOME_DO_SITE)}. Desenvolvido por ${esc(AUTOR_DO_SITE)}. Todos os direitos reservados.</p>
     </div>`;
 
@@ -195,13 +202,14 @@ async function montarMenuUsuario() {
 
   alvo.innerHTML = `
     <button aria-haspopup="true" aria-expanded="false" id="btn-menu-usuario">
-      ${avatarHtml(avatar, nick)}
+      ${avatarHtml(avatar, nick, temSeloApoiador(perfil?.apoiadorAte))}
       <span class="nome-curto">${nomeComTag(nick, perfil?.tag, perfil?.favoritoTitulo)}</span>
     </button>
     <div class="menu-dropdown" role="menu">
       <a href="usuario.html?id=${usuario.id}" role="menuitem">Meu perfil público</a>
       <a href="perfil.html" role="menuitem">Editar perfil</a>
       <a href="lista.html" role="menuitem">Minha lista</a>
+      <a href="apoiar.html" role="menuitem">Apoiar o AnimeSe ♥</a>
       ${perfil?.papel === "admin" ? `<a href="admin.html" role="menuitem" id="link-admin">Painel admin</a>` : ""}
       <hr>
       <button type="button" role="menuitem" id="btn-sair">Sair</button>
@@ -225,19 +233,21 @@ async function montarMenuUsuario() {
 async function avisarPedidosAdmin(menu) {
   const db = clienteSupabase();
   if (!db) return;
-  const [pedidos, denuncias] = await Promise.all([
+  const [pedidos, denuncias, apoios] = await Promise.all([
     db.rpc("pedidos_criador_pendentes").then((r) => (r.error ? 0 : r.data || 0)),
     FEED_ATIVO ? db.rpc("denuncias_abertas").then((r) => (r.error ? 0 : r.data || 0)) : 0,
+    db.rpc("apoios_pendentes").then((r) => (r.error ? 0 : r.data || 0)),
   ]);
-  const n = pedidos + denuncias;
+  const n = pedidos + denuncias + apoios;
   if (!n) return;
   const partes = [
     pedidos ? `${pedidos} ${pedidos === 1 ? "pedido de criador" : "pedidos de criador"}` : "",
     denuncias ? `${denuncias} ${denuncias === 1 ? "publicação denunciada" : "publicações denunciadas"}` : "",
-  ].filter(Boolean).join(" e ");
+    apoios ? `${apoios} ${apoios === 1 ? "apoio para conferir" : "apoios para conferir"}` : "",
+  ].filter(Boolean).join(", ");
   menu.querySelector("#btn-menu-usuario").insertAdjacentHTML("beforeend", `<span class="ponto-alerta" title="${partes}"><span class="sr-only">${partes}</span></span>`);
   const link = menu.querySelector("#link-admin");
-  link.href = `admin.html?aba=${denuncias ? "denuncias" : "criadores"}`;
+  link.href = `admin.html?aba=${apoios ? "apoios" : denuncias ? "denuncias" : "criadores"}`;
   link.innerHTML = `Painel admin <span class="contador-alerta">${n}</span>`;
   link.title = partes;
 }

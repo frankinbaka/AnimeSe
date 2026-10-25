@@ -17,7 +17,7 @@ export const COMUNIDADE_ATIVA = !MODO_DEMO;
 // Campos públicos do autor (nick, tag, foto)
 // O nome da ligação (!tabela_user_id_fkey) é necessário porque avaliações e
 // perfis também se ligam pela tabela de likes.
-const CAMPOS_AUTOR = "id, nickname, tag, display_name, avatar_url, favorite_title";
+const CAMPOS_AUTOR = "id, nickname, tag, display_name, avatar_url, favorite_title, supporter_until";
 const autorDe = (tabela) => `autor:profiles!${tabela}_user_id_fkey(${CAMPOS_AUTOR})`;
 
 export const NOTAS = {

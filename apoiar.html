@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Apoiar o AnimeSe</title>
+  <meta name="description" content="Acompanhe os animes da temporada, busque qualquer anime e monte sua lista: assistindo, já assisti, pretendo assistir e dropei.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='16' fill='%23e2457a'/><text x='16' y='22' font-size='17' text-anchor='middle' fill='white'>ア</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header id="site-header"></header>
+  <main>
+    <section class="container apoio">
+      <header class="apoio-topo">
+        <h1>Apoie o AnimeSe</h1>
+        <p class="apoio-lead">O AnimeSe é feito por um fã, sem anúncios. Seu apoio paga o servidor, a tradução das sinopses e o tempo para criar coisas novas.</p>
+        <ul class="apoio-beneficios">
+          <li><span class="selo selo-apoiador">Apoiador</span> ao lado do seu nome em todo o site</li>
+          <li><span class="avatar-exemplo" aria-hidden="true"></span> Moldura dourada na sua foto</li>
+          <li><span aria-hidden="true">♥</span> Seu nome no mural de apoiadores (se quiser)</li>
+        </ul>
+      </header>
+
+      <div class="apoio-colunas">
+        <section class="apoio-passo" aria-labelledby="passo1">
+          <h2 id="passo1"><span class="passo-num">1</span> Faça o Pix</h2>
+          <fieldset class="valores">
+            <legend>Escolha um valor</legend>
+            <div class="chips" id="valores">
+              <button type="button" class="chip" data-valor="5" aria-pressed="false">R$ 5</button>
+              <button type="button" class="chip" data-valor="10" aria-pressed="true">R$ 10</button>
+              <button type="button" class="chip" data-valor="20" aria-pressed="false">R$ 20</button>
+              <button type="button" class="chip" data-valor="50" aria-pressed="false">R$ 50</button>
+              <button type="button" class="chip" data-valor="" aria-pressed="false">Outro valor</button>
+            </div>
+            <div class="campo campo-outro" id="campo-outro" hidden>
+              <label for="valor-outro">Valor em reais</label>
+              <input id="valor-outro" type="number" min="1" max="10000" step="1" inputmode="numeric" placeholder="Ex.: 15">
+            </div>
+          </fieldset>
+          <div id="area-pix"></div>
+        </section>
+
+        <section class="apoio-passo" aria-labelledby="passo2">
+          <h2 id="passo2"><span class="passo-num">2</span> Avise que apoiou</h2>
+          <div id="area-aviso"></div>
+        </section>
+      </div>
+
+      <section class="secao" aria-labelledby="titulo-mural">
+        <h2 id="titulo-mural">Mural de apoiadores</h2>
+        <div id="mural"></div>
+      </section>
+    </section>
+  </main>
+  <footer id="site-footer"></footer>
+  <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
+  <script defer src="/_vercel/insights/script.js"></script>
+  <script type="module" src="js/paginas/apoiar.js"></script>
+</body>
+</html>

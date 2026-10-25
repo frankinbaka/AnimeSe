@@ -1,7 +1,7 @@
 // Página de um anime: dados do MAL, status na lista, avaliações
 // da comunidade (nota 1–10 + comentário, respostas e likes) e
 // sugestões de quem recomenda o anime.
-import { montarLayout, caixaErro, esc, formatarNota, formatarNumero, toast, entrar, nomeComTag, avatarHtml } from "../ui.js";
+import { montarLayout, caixaErro, esc, formatarNota, formatarNumero, toast, entrar, nomeComTag, avatarHtml, temSeloApoiador, seloApoiador } from "../ui.js";
 import { detalhes, traduzirStatus, nomeTemporada, sinopseEmPortugues, temporadasDoAnime } from "../mal.js";
 import { usuarioAtual, lerPerfil, statusNaLista, definirStatus, removerDaLista, STATUS, nomeStatus } from "../store.js";
 import { linkPerfil } from "../perfis.js";
@@ -232,10 +232,10 @@ async function montarSugestoes(anime, notasPorUsuario = null) {
       <ul class="lista-sugestores">
         ${lista.map((s) => `
           <li>
-            ${avatarHtml(s.autor?.avatar_url, nomeAutor(s.autor))}
+            ${avatarHtml(s.autor?.avatar_url, nomeAutor(s.autor), temSeloApoiador(s.autor?.supporter_until))}
             <div>
               <div class="linha-autor">
-                ${nomeComTag(nomeAutor(s.autor), s.autor?.tag, s.autor?.favorite_title, linkPerfil(s.autor))}
+                ${nomeComTag(nomeAutor(s.autor), s.autor?.tag, s.autor?.favorite_title, linkPerfil(s.autor))}${temSeloApoiador(s.autor?.supporter_until) ? seloApoiador() : ""}
                 ${notas[s.user_id] ? `<span class="nota-usuario" title="Nota que deu ao anime">★ ${notas[s.user_id]}/10</span>` : ""}
                 <span class="data">${tempoAtras(s.created_at)}</span>
               </div>
@@ -385,9 +385,9 @@ function cartaoAvaliacao(r, curtidas) {
   return `
     <article class="avaliacao ${minha ? "avaliacao-minha" : ""}" data-id="${r.id}">
       <header>
-        ${avatarHtml(r.autor?.avatar_url, nome)}
+        ${avatarHtml(r.autor?.avatar_url, nome, temSeloApoiador(r.autor?.supporter_until))}
         <div class="linha-autor">
-          ${nomeComTag(nome, r.autor?.tag, r.autor?.favorite_title, linkPerfil(r.autor))}
+          ${nomeComTag(nome, r.autor?.tag, r.autor?.favorite_title, linkPerfil(r.autor))}${temSeloApoiador(r.autor?.supporter_until) ? seloApoiador() : ""}
           ${minha ? `<span class="selo-voce">você</span>` : ""}
           <span class="data">${tempoAtras(r.created_at)}${r.updated_at && r.updated_at !== r.created_at && new Date(r.updated_at) - new Date(r.created_at) > 60000 ? " (editada)" : ""}</span>
         </div>
@@ -410,10 +410,10 @@ function cartaoAvaliacao(r, curtidas) {
         <div class="respostas">
           ${(r.respostas || []).map((resp) => `
             <div class="resposta" data-resposta="${resp.id}">
-              ${avatarHtml(resp.autor?.avatar_url, nomeAutor(resp.autor))}
+              ${avatarHtml(resp.autor?.avatar_url, nomeAutor(resp.autor), temSeloApoiador(resp.autor?.supporter_until))}
               <div>
                 <div class="linha-autor">
-                  ${nomeComTag(nomeAutor(resp.autor), resp.autor?.tag, resp.autor?.favorite_title, linkPerfil(resp.autor))}
+                  ${nomeComTag(nomeAutor(resp.autor), resp.autor?.tag, resp.autor?.favorite_title, linkPerfil(resp.autor))}${temSeloApoiador(resp.autor?.supporter_until) ? seloApoiador() : ""}
                   <span class="data">${tempoAtras(resp.created_at)}</span>
                   ${usuario && resp.user_id === usuario.id ? `<button class="btn-texto perigo" type="button" data-acao="excluir-resposta">Excluir</button>`
                     : souAdmin ? `<button class="btn-texto perigo" type="button" data-acao="excluir-resposta" data-moderacao="1">Remover (admin)</button>` : ""}

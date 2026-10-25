@@ -12,7 +12,7 @@ const db = () => {
 };
 
 const CAMPOS_PUBLICOS =
-  "id, nickname, tag, display_name, avatar_url, favorite_mal_id, favorite_title, favorite_image, bio, is_creator, youtube_url, tiktok_url, instagram_url, creator_videos, role, created_at";
+  "id, nickname, tag, display_name, avatar_url, favorite_mal_id, favorite_title, favorite_image, bio, is_creator, youtube_url, tiktok_url, instagram_url, creator_videos, role, created_at, supporter_until";
 
 /** Link para o perfil público de alguém (pelo id, que não muda quando o nick muda). */
 export const linkPerfil = (autor) => (autor?.id ? `usuario.html?id=${autor.id}` : null);
