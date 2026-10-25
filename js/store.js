@@ -224,3 +224,58 @@ export async function removerDaLista(malId) {
   const { error } = await supabase.from("anime_list").delete().eq("user_id", u.id).eq("mal_id", malId);
   if (error) throw error;
 }
+
+// ------------------------------------------------------------
+// Foto de perfil (etapa 7)
+// ------------------------------------------------------------
+
+/** Corta a imagem em quadrado (centro) e reduz para 320x320 em WEBP. */
+async function prepararFoto(arquivo) {
+  const bitmap = await createImageBitmap(arquivo).catch(() => null);
+  if (!bitmap) throw new Error("Não consegui abrir essa imagem. Use JPG, PNG ou WEBP.");
+  const lado = Math.min(bitmap.width, bitmap.height);
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = 320;
+  canvas.getContext("2d").drawImage(bitmap, (bitmap.width - lado) / 2, (bitmap.height - lado) / 2, lado, lado, 0, 0, 320, 320);
+  return new Promise((ok) => canvas.toBlob(ok, "image/webp", 0.88));
+}
+
+/** Envia uma nova foto de perfil e devolve o endereço dela. */
+export async function enviarFotoPerfil(arquivo) {
+  const u = await usuarioAtual();
+  if (!u) throw new Error("Entre com sua conta para trocar a foto.");
+  if (!arquivo) throw new Error("Escolha uma imagem.");
+  if (!/^image\/(jpeg|png|webp|gif|heic|heif)$/.test(arquivo.type)) throw new Error("Use uma imagem JPG, PNG ou WEBP.");
+  if (arquivo.size > 15 * 1024 * 1024) throw new Error("A imagem é grande demais (máximo 15 MB).");
+  if (MODO_DEMO) throw new Error("A troca de foto precisa do Supabase configurado.");
+
+  const blob = await prepararFoto(arquivo);
+  const pasta = u.id;
+  const caminho = `${pasta}/${Date.now()}.webp`;
+  const { error } = await supabase.storage.from("avatares").upload(caminho, blob, { contentType: "image/webp" });
+  if (error) {
+    if (/bucket not found/i.test(error.message)) throw new Error("A troca de foto ainda não foi ativada no banco (falta rodar o SQL da etapa 7).");
+    throw new Error(error.message);
+  }
+  const url = supabase.storage.from("avatares").getPublicUrl(caminho).data.publicUrl;
+
+  const { error: erroPerfil } = await supabase.from("profiles").update({ avatar_url: url }).eq("id", u.id);
+  if (erroPerfil) throw new Error(erroPerfil.message);
+
+  // Apaga as fotos antigas para não ocupar espaço
+  const { data: antigos } = await supabase.storage.from("avatares").list(pasta);
+  const remover = (antigos || []).map((f) => `${pasta}/${f.name}`).filter((c) => c !== caminho);
+  if (remover.length) await supabase.storage.from("avatares").remove(remover);
+  return url;
+}
+
+/** Volta a usar a foto da conta Google. */
+export async function usarFotoGoogle() {
+  const u = await usuarioAtual();
+  if (!u) throw new Error("Entre com sua conta para trocar a foto.");
+  const { error } = await supabase.from("profiles").update({ avatar_url: u.avatar }).eq("id", u.id);
+  if (error) throw new Error(error.message);
+  const { data: antigos } = await supabase.storage.from("avatares").list(u.id);
+  if (antigos?.length) await supabase.storage.from("avatares").remove(antigos.map((f) => `${u.id}/${f.name}`));
+  return u.avatar;
+}

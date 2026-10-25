@@ -1051,3 +1051,8 @@ h3 { font-size: 1.05rem; }
 .feed-entrada .icone-play { position: static; width: 84px; height: 84px; font-size: 2rem; background: var(--sakura); }
 .feed-entrada:hover .icone-play { transform: scale(1.06); }
 .contador-alerta[hidden] { display: none; }
+
+/* Foto de perfil editável */
+.foto-perfil { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.btn-foto { width: auto; margin: 0; padding: 6px 14px; font-size: .85rem; }
+#foto-atual.enviando { opacity: .4; animation: pulsar 1s ease-in-out infinite; }

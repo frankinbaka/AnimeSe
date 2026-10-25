@@ -3,7 +3,7 @@ import {
   montarLayout, caixaErro, esc, toast, entrar,
   nomeComTag, avatarHtml, sugerirTag, limparTag,
 } from "../ui.js";
-import { usuarioAtual, lerPerfil, salvarPerfil, lerLista } from "../store.js";
+import { usuarioAtual, lerPerfil, salvarPerfil, lerLista, enviarFotoPerfil, usarFotoGoogle } from "../store.js";
 import { buscar } from "../mal.js";
 import { REDES, normalizarLinkRede, videoIncorporavel, solicitarCriador, cancelarPedidoCriador, sairDeCriador } from "../perfis.js";
 
@@ -47,7 +47,13 @@ function montar(perfil, lista) {
 
   alvo.innerHTML = `
     <div class="perfil-cartao" aria-live="polite">
-      ${avatarHtml(avatar, estado.nick || usuario.nome)}
+      <div class="foto-perfil">
+        <div id="foto-atual">${avatarHtml(avatar, estado.nick || usuario.nome)}</div>
+        <label class="btn btn-contorno btn-arquivo btn-foto">Trocar foto
+          <input type="file" id="campo-foto" accept="image/jpeg,image/png,image/webp">
+        </label>
+        ${usuario.avatar && avatar !== usuario.avatar ? `<button type="button" class="btn-texto" id="btn-foto-google">Usar a foto do Google</button>` : ""}
+      </div>
       <div>
         <div id="previa-nome"></div>
         <p>${lista.length} ${lista.length === 1 ? "anime" : "animes"} na lista, ${assistidos} ${assistidos === 1 ? "já assistido" : "já assistidos"}</p>
@@ -111,6 +117,7 @@ function montar(perfil, lista) {
     </form>`;
 
   montarCriador();
+  ligarFoto();
 
   const campoNick = alvo.querySelector("#campo-nick");
   const campoTag = alvo.querySelector("#campo-tag");
@@ -224,6 +231,41 @@ function montar(perfil, lista) {
 
   mostrarEscolhido();
   atualizarPrevia();
+
+  // ------------------------------------------------------------
+  // Foto de perfil
+  // ------------------------------------------------------------
+  function ligarFoto() {
+    const campo = alvo.querySelector("#campo-foto");
+    const atual = alvo.querySelector("#foto-atual");
+    const trocarNoMenu = (url) => {
+      const img = document.querySelector("#btn-menu-usuario .avatar");
+      if (img?.tagName === "IMG") img.src = url;
+      else img?.replaceWith(Object.assign(document.createElement("img"), { className: "avatar", src: url, alt: "" }));
+    };
+    campo.addEventListener("change", async () => {
+      const arquivo = campo.files[0];
+      if (!arquivo) return;
+      atual.classList.add("enviando");
+      try {
+        const url = await enviarFotoPerfil(arquivo);
+        atual.innerHTML = avatarHtml(url, estado.nick || usuario.nome);
+        trocarNoMenu(url);
+        toast("Foto de perfil atualizada");
+      } catch (e) { toast(e.message); }
+      atual.classList.remove("enviando");
+      campo.value = "";
+    });
+    alvo.querySelector("#btn-foto-google")?.addEventListener("click", async (e) => {
+      try {
+        const url = await usarFotoGoogle();
+        atual.innerHTML = avatarHtml(url, estado.nick || usuario.nome);
+        trocarNoMenu(url);
+        e.target.remove();
+        toast("Voltou para a foto do Google");
+      } catch (err) { toast(err.message); }
+    });
+  }
 
   // ------------------------------------------------------------
   // Criador de conteúdo: pedido ao admin
