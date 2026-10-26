@@ -287,6 +287,9 @@ async function montarMenuUsuario() {
 
   if (perfil?.papel === "admin") avisarPedidosAdmin(alvo);
 
+  // Sininho de notificações
+  if (!MODO_DEMO) import("./notificacoes.js").then((m) => m.iniciarNotificacoes(alvo)).catch(() => {});
+
   // Chat geral flutuante (só para quem tem conta)
   if (!MODO_DEMO && !document.body.classList.contains("pagina-feed")) {
     import("./chat.js").then((m) => m.iniciarChat(usuario, perfil)).catch(() => {});
