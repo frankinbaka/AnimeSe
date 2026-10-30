@@ -50,6 +50,7 @@ function abrirAba(nome) {
   if (nome === "publicacoes") mostrarPublicacoes();
   else if (nome === "criadores") mostrarCriadores();
   else if (nome === "apoios") mostrarApoios();
+  else if (nome === "quiz") mostrarQuiz();
   else if (nome === "paginas" && PAGINAS_ATIVAS) mostrarPaginas();
   else if (nome === "denuncias" && FEED_ATIVO) mostrarDenuncias();
   else mostrarEstatisticas();
@@ -61,7 +62,7 @@ function abrirAba(nome) {
 const NOMES_PAGINAS = {
   "/index.html": "Início", "/anime.html": "Páginas de anime", "/buscar.html": "Buscar",
   "/sortear.html": "O que assistir?", "/comunidade.html": "Comunidade", "/lista.html": "Minha lista",
-  "/perfil.html": "Editar perfil", "/usuario.html": "Perfis públicos", "/feed.html": "Feed de vídeos", "/paginas.html": "Feed das páginas", "/pagina.html": "Páginas da comunidade", "/novidades.html": "Novidades (antiga)", "/post.html": "Publicações", "/admin.html": "Painel admin",
+  "/perfil.html": "Editar perfil", "/usuario.html": "Perfis públicos", "/feed.html": "Feed de vídeos", "/paginas.html": "Feed das páginas", "/pagina.html": "Páginas da comunidade", "/quiz.html": "Quiz diário", "/novidades.html": "Novidades (antiga)", "/post.html": "Publicações", "/admin.html": "Painel admin",
 };
 const nomePagina = (p) => NOMES_PAGINAS[p] || p;
 
@@ -797,4 +798,203 @@ async function mostrarPaginas() {
       mostrarPaginas();
     } catch (e) { toast(e.message); b.disabled = false; }
   }));
+}
+
+
+// ============================================================
+// Quiz diário: perguntas e desafios
+// ============================================================
+const DIFICULDADES = { facil: "Fácil", media: "Média", dificil: "Difícil" };
+const amanha = () => { const d = new Date(Date.now() - 3 * 3600000 + 86400000); return d.toISOString().slice(0, 10); };
+
+async function mostrarQuiz() {
+  alvo.innerHTML = `<p class="secao-descricao">Carregando o quiz…</p>`;
+  const db = clienteSupabase();
+  const [{ data: perguntas, error }, desafios] = await Promise.all([
+    db.from("quiz_questions").select("*").order("created_at", { ascending: false }),
+    db.rpc("quiz_desafios_admin").then((r) => r.data || []),
+  ]);
+  if (error) {
+    alvo.innerHTML = caixaErro(/does not exist|schema cache/i.test(error.message) ? "O quiz ainda não foi ativado no banco (falta rodar o SQL da etapa 17)." : error.message);
+    return;
+  }
+  const ativas = perguntas.filter((q) => q.ativa);
+  const porId = new Map(perguntas.map((q) => [q.id, q]));
+
+  alvo.innerHTML = `
+    <div class="painel-admin">
+      <h2>Desafios</h2>
+      <p class="secao-descricao">Se você não montar o desafio de um dia, o site sorteia 10 perguntas ativas automaticamente (as menos usadas primeiro).
+        Um desafio que alguém já jogou não pode mais ser alterado.</p>
+      <button type="button" class="btn btn-primario" id="btn-montar">+ Montar desafio</button>
+      <div id="area-montar"></div>
+      ${desafios.length ? `<ul class="quiz-admin-desafios">${desafios.map((d) => `
+        <li>
+          <strong>${new Date(d.dia + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })}</strong>
+          <span>${esc(d.titulo || "Desafio do dia")} · ${(d.perguntas || []).length} perguntas</span>
+          <span class="dica">${d.participantes} ${d.participantes === 1 ? "participante" : "participantes"}${d.media !== null ? ` · média ${d.media} pts` : ""}</span>
+        </li>`).join("")}</ul>` : `<p class="vazio">Nenhum desafio nos últimos 30 dias.</p>`}
+    </div>
+    <div class="painel-admin">
+      <h2>Perguntas <small class="dica">${ativas.length} ativas de ${perguntas.length}</small></h2>
+      ${ativas.length < 10 ? `<div class="aviso">Cadastre pelo menos 10 perguntas ativas para o desafio automático funcionar.</div>` : ""}
+      <div class="form-acoes"><button type="button" class="btn btn-primario" id="btn-nova-pergunta">+ Nova pergunta</button>
+        <input type="search" id="filtro-perguntas" class="quiz-filtro" placeholder="Filtrar por texto ou anime…"></div>
+      <div id="area-pergunta"></div>
+      <ul class="quiz-admin-perguntas" id="lista-perguntas"></ul>
+    </div>`;
+
+  const lista = alvo.querySelector("#lista-perguntas");
+  const desenharLista = (filtro = "") => {
+    const f = filtro.toLowerCase();
+    const itens = perguntas.filter((q) => !f || q.enunciado.toLowerCase().includes(f) || (q.anime || "").toLowerCase().includes(f));
+    lista.innerHTML = itens.map((q) => `
+      <li class="${q.ativa ? "" : "inativa"}" data-id="${q.id}">
+        <div>
+          <p><strong>${esc(q.enunciado)}</strong></p>
+          <p class="dica">${q.anime ? esc(q.anime) + " · " : ""}${DIFICULDADES[q.dificuldade]} · certa: ${esc(q.alternativas[q.correta])} · usada ${q.vezes_usada}×${q.ativa ? "" : " · <strong>inativa</strong>"}</p>
+        </div>
+        <div class="quiz-admin-acoes">
+          <button type="button" class="btn btn-contorno btn-pequeno" data-editar-q="${q.id}">Editar</button>
+          <button type="button" class="btn btn-contorno btn-pequeno" data-ativar-q="${q.id}">${q.ativa ? "Desativar" : "Ativar"}</button>
+          <button type="button" class="btn-link-perigo" data-excluir-q="${q.id}">Excluir</button>
+        </div>
+      </li>`).join("") || `<li class="vazio">Nenhuma pergunta encontrada.</li>`;
+  };
+  desenharLista();
+  alvo.querySelector("#filtro-perguntas").addEventListener("input", (e) => desenharLista(e.target.value));
+
+  // ----- Formulário de pergunta -----
+  const area = alvo.querySelector("#area-pergunta");
+  const abrirForm = (q = null) => {
+    const alts = q ? q.alternativas : ["", "", "", ""];
+    area.innerHTML = `
+      <form class="formulario form-quiz">
+        <h3>${q ? "Editar pergunta" : "Nova pergunta"}</h3>
+        <label class="campo-quiz">Enunciado<textarea name="enunciado" rows="2" maxlength="400" required>${esc(q?.enunciado || "")}</textarea></label>
+        <div class="linha-quiz">
+          <label class="campo-quiz">Anime (opcional)<input name="anime" maxlength="120" value="${esc(q?.anime || "")}"></label>
+          <label class="campo-quiz">Dificuldade<select name="dificuldade">${Object.entries(DIFICULDADES).map(([v, n]) => `<option value="${v}" ${(q?.dificuldade || "media") === v ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+        </div>
+        <fieldset class="alternativas-quiz"><legend>Alternativas <small>(marque a certa)</small></legend>
+          <div id="alts">${alts.map((a, i) => linhaAlt(a, i, q ? q.correta === i : i === 0)).join("")}</div>
+          <button type="button" class="btn btn-contorno btn-pequeno" id="mais-alt">+ Alternativa</button>
+        </fieldset>
+        <label class="campo-quiz">Explicação (aparece no gabarito, opcional)<textarea name="explicacao" rows="2" maxlength="500">${esc(q?.explicacao || "")}</textarea></label>
+        <label class="check"><input type="checkbox" name="ativa" ${q?.ativa === false ? "" : "checked"}> Ativa (pode entrar nos desafios)</label>
+        <div class="form-acoes"><button type="submit" class="btn btn-primario">Salvar</button><button type="button" class="btn btn-contorno" data-cancelar>Cancelar</button></div>
+      </form>`;
+    const form = area.querySelector("form");
+    const caixaAlts = form.querySelector("#alts");
+    const renumerar = () => caixaAlts.querySelectorAll(".alt-quiz").forEach((el, i) => {
+      el.querySelector(".quiz-letra").textContent = "ABCDE"[i];
+      el.querySelector("input[type=radio]").value = i;
+    });
+    form.querySelector("#mais-alt").addEventListener("click", () => {
+      if (caixaAlts.children.length >= 5) return toast("No máximo 5 alternativas");
+      caixaAlts.insertAdjacentHTML("beforeend", linhaAlt("", caixaAlts.children.length, false));
+      renumerar();
+    });
+    caixaAlts.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-tirar]");
+      if (!b) return;
+      if (caixaAlts.children.length <= 2) return toast("Mínimo de 2 alternativas");
+      b.closest(".alt-quiz").remove();
+      renumerar();
+      if (!caixaAlts.querySelector("input[type=radio]:checked")) caixaAlts.querySelector("input[type=radio]").checked = true;
+    });
+    form.querySelector("[data-cancelar]").addEventListener("click", () => (area.innerHTML = ""));
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const textos = [...caixaAlts.querySelectorAll("input[type=text]")].map((i) => i.value.trim());
+      if (textos.some((t) => !t)) return toast("Preencha todas as alternativas (ou remova as vazias)");
+      if (new Set(textos.map((t) => t.toLowerCase())).size !== textos.length) return toast("Há alternativas repetidas");
+      const registro = {
+        enunciado: form.enunciado.value.trim(), anime: form.anime.value.trim() || null, dificuldade: form.dificuldade.value,
+        alternativas: textos, correta: Number(caixaAlts.querySelector("input[type=radio]:checked").value),
+        explicacao: form.explicacao.value.trim() || null, ativa: form.ativa.checked,
+      };
+      if (registro.enunciado.length < 5) return toast("Escreva o enunciado");
+      const botao = form.querySelector("[type=submit]");
+      botao.disabled = true;
+      const { error: erro } = q ? await db.from("quiz_questions").update(registro).eq("id", q.id) : await db.from("quiz_questions").insert(registro);
+      if (erro) { toast(erro.message); botao.disabled = false; return; }
+      toast(q ? "Pergunta salva" : "Pergunta cadastrada");
+      mostrarQuiz();
+    });
+    area.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  alvo.querySelector("#btn-nova-pergunta").addEventListener("click", () => abrirForm());
+
+  lista.addEventListener("click", async (e) => {
+    const editar = e.target.closest("[data-editar-q]");
+    const ativar = e.target.closest("[data-ativar-q]");
+    const excluir = e.target.closest("[data-excluir-q]");
+    if (editar) abrirForm(porId.get(Number(editar.dataset.editarQ)));
+    if (ativar) {
+      const q = porId.get(Number(ativar.dataset.ativarQ));
+      const { error: erro } = await db.from("quiz_questions").update({ ativa: !q.ativa }).eq("id", q.id);
+      if (erro) return toast(erro.message);
+      mostrarQuiz();
+    }
+    if (excluir) {
+      if (!confirm("Excluir esta pergunta de vez?")) return;
+      const { error: erro } = await db.from("quiz_questions").delete().eq("id", Number(excluir.dataset.excluirQ));
+      if (erro) return toast(/foreign key|violates/i.test(erro.message) ? "Ela já foi usada em um desafio. Desative em vez de excluir." : erro.message);
+      toast("Pergunta excluída");
+      mostrarQuiz();
+    }
+  });
+
+  // ----- Montar desafio -----
+  alvo.querySelector("#btn-montar").addEventListener("click", () => {
+    const areaM = alvo.querySelector("#area-montar");
+    const ordenadas = [...ativas].sort((a, b) => (a.usada_em || "").localeCompare(b.usada_em || ""));
+    areaM.innerHTML = `
+      <form class="formulario form-quiz">
+        <div class="linha-quiz">
+          <label class="campo-quiz">Dia<input type="date" name="dia" value="${amanha()}" required></label>
+          <label class="campo-quiz">Título (opcional)<input name="titulo" maxlength="120" placeholder="Ex.: Especial Shonen"></label>
+        </div>
+        <p class="dica">Marque as perguntas na ordem em que devem aparecer (de 3 a 20). <strong id="n-marcadas">0</strong> marcadas.
+          <button type="button" class="link-entrar" id="sortear-10">Sortear 10</button></p>
+        <ol class="quiz-escolher">${ordenadas.map((q) => `
+          <li><label><input type="checkbox" value="${q.id}"> <span>${esc(q.enunciado)} <small class="dica">${q.anime ? esc(q.anime) + " · " : ""}${DIFICULDADES[q.dificuldade]} · ${q.usada_em ? "usada em " + new Date(q.usada_em + "T12:00:00").toLocaleDateString("pt-BR") : "nunca usada"}</small></span></label></li>`).join("")}</ol>
+        <div class="form-acoes"><button type="submit" class="btn btn-primario">Salvar desafio</button><button type="button" class="btn btn-contorno" data-cancelar>Cancelar</button></div>
+      </form>`;
+    const form = areaM.querySelector("form");
+    let ordem = [];
+    const contador = form.querySelector("#n-marcadas");
+    form.querySelectorAll("input[type=checkbox]").forEach((c) => c.addEventListener("change", () => {
+      const id = Number(c.value);
+      ordem = c.checked ? [...ordem, id] : ordem.filter((x) => x !== id);
+      contador.textContent = ordem.length;
+    }));
+    form.querySelector("#sortear-10").addEventListener("click", () => {
+      const caixas = [...form.querySelectorAll("input[type=checkbox]")];
+      caixas.forEach((c) => (c.checked = false));
+      // Prioriza as nunca/menos usadas, com um pouco de sorte
+      const escolhidas = caixas.slice(0, Math.max(10, Math.ceil(caixas.length / 2))).sort(() => Math.random() - 0.5).slice(0, 10);
+      escolhidas.forEach((c) => (c.checked = true));
+      ordem = escolhidas.map((c) => Number(c.value));
+      contador.textContent = ordem.length;
+    });
+    form.querySelector("[data-cancelar]").addEventListener("click", () => (areaM.innerHTML = ""));
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (ordem.length < 3 || ordem.length > 20) return toast("Escolha de 3 a 20 perguntas");
+      const { error: erro } = await db.rpc("quiz_montar_desafio", { p_dia: form.dia.value, p_perguntas: ordem, p_titulo: form.titulo.value || null });
+      if (erro) return toast(erro.message);
+      toast("Desafio salvo");
+      mostrarQuiz();
+    });
+  });
+}
+
+function linhaAlt(texto, i, certa) {
+  return `<div class="alt-quiz">
+    <label class="alt-certa" title="Resposta certa"><input type="radio" name="correta" value="${i}" ${certa ? "checked" : ""}><span class="quiz-letra">${"ABCDE"[i]}</span></label>
+    <input type="text" maxlength="150" value="${esc(texto)}" placeholder="Alternativa">
+    <button type="button" class="btn-link-perigo" data-tirar aria-label="Remover alternativa">×</button>
+  </div>`;
 }

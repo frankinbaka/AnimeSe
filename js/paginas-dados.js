@@ -23,14 +23,15 @@ function erroAmigavel(error) {
 export const CAMPOS_PAGINA = "id, owner_id, slug, name, description, avatar_url, status, admin_note, followers_count, posts_count, created_at, reviewed_at";
 // "edited_at" só existe depois do SQL da etapa 14; sem ele, o site segue sem a marca "editada"
 let comEdicao = true;
-const camposPost = () => CAMPOS_POST_BASE.replace("created_at,", comEdicao ? "created_at, edited_at," : "created_at,");
+// (sem as colunas novas, também tira comments_count, da etapa 16)
+const camposPost = () => comEdicao ? CAMPOS_POST_BASE.replace("created_at,", "created_at, edited_at,") : CAMPOS_POST_BASE.replace("comments_count, ", "");
 /** Roda a consulta e, se a coluna edited_at ainda não existir, repete sem ela. */
 async function comCampos(montar) {
   let r = await montar(camposPost());
   if (r.error?.code === "42703" && comEdicao) { comEdicao = false; r = await montar(camposPost()); }
   return r;
 }
-const CAMPOS_POST_BASE = `id, page_id, body, image_url, likes_count, reposts_count, created_at,
+const CAMPOS_POST_BASE = `id, page_id, body, image_url, likes_count, reposts_count, comments_count, created_at,
   pagina:pages!page_posts_page_id_fkey(id, slug, name, avatar_url, owner_id)`;
 export const POR_VEZ = 15;
 
@@ -257,6 +258,31 @@ export async function republicadasPor(usuarioId, limite = 50) {
     .eq("user_id", usuarioId).order("created_at", { ascending: false }).limit(limite));
   if (error) throw erroAmigavel(error);
   return (data || []).filter((r) => r.post?.pagina).map((r) => ({ ...r.post, republicadoEm: r.created_at }));
+}
+
+// ------------------------------------------------------------
+// Comentários
+// ------------------------------------------------------------
+export async function comentarios(postId) {
+  const { data, error } = await db().from("page_post_comments")
+    .select("id, post_id, user_id, body, created_at, autor:profiles!page_post_comments_user_id_fkey(id, nickname, tag, display_name, avatar_url, favorite_title, supporter_until, role)")
+    .eq("post_id", postId).order("created_at", { ascending: true }).limit(200);
+  if (error) throw erroAmigavel(error);
+  return data;
+}
+
+export async function comentar(postId, texto) {
+  const u = await usuarioAtual();
+  if (!u) throw new Error("Entre com sua conta para comentar.");
+  const { data, error } = await db().from("page_post_comments").insert({ post_id: postId, user_id: u.id, body: texto.trim() })
+    .select("id, post_id, user_id, body, created_at, autor:profiles!page_post_comments_user_id_fkey(id, nickname, tag, display_name, avatar_url, favorite_title, supporter_until, role)").single();
+  if (error) throw erroAmigavel(error);
+  return data;
+}
+
+export async function apagarComentario(id) {
+  const { error } = await db().from("page_post_comments").delete().eq("id", id);
+  if (error) throw erroAmigavel(error);
 }
 
 // ------------------------------------------------------------

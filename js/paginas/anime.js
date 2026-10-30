@@ -3,7 +3,7 @@
 // sugestões de quem recomenda o anime.
 import { montarLayout, caixaErro, esc, formatarNota, formatarNumero, toast, entrar, nomeComTag, avatarHtml, temSeloApoiador, seloApoiador } from "../ui.js";
 import { detalhes, traduzirStatus, nomeTemporada, sinopseEmPortugues, temporadasDoAnime } from "../mal.js";
-import { usuarioAtual, lerPerfil, statusNaLista, definirStatus, removerDaLista, STATUS, nomeStatus } from "../store.js";
+import { usuarioAtual, lerPerfil, statusNaLista, definirStatus, removerDaLista, STATUS, nomeStatus, clienteSupabase } from "../store.js";
 import { linkPerfil } from "../perfis.js";
 import { amigosNoAnime } from "../social.js";
 import {
@@ -30,6 +30,7 @@ if (!id || !/^\d+$/.test(id)) {
     carregarSinopse(anime);
     carregarTemporadas(anime);
     if (COMUNIDADE_ATIVA && usuario) mostrarAmigos(anime);
+    if (COMUNIDADE_ATIVA) mostrarEstatisticasLista(anime);
     await montarPainelLista(anime);
     if (COMUNIDADE_ATIVA) montarAvaliacoes(anime); // carrega também as sugestões
   } catch (e) {
@@ -66,6 +67,7 @@ function montarPagina(a) {
         ${a.generos.length ? `<div class="generos">${a.generos.map((g) => `<span class="genero">${esc(g)}</span>`).join("")}</div>` : ""}
         <div class="painel-lista" id="painel-lista"></div>
         <div id="amigos-anime"></div>
+        <div id="estatisticas-comunidade"></div>
         <h2>Sinopse</h2>
         <p class="sinopse" id="sinopse" aria-busy="true">Carregando sinopse em português…</p>
         <p class="anime-titulo-alt">
@@ -150,6 +152,34 @@ async function carregarTemporadas(anime) {
 // ------------------------------------------------------------
 // Quem você segue já assistiu ou avaliou este anime
 // ------------------------------------------------------------
+// Quantas pessoas do AnimeSe têm o anime em cada status
+async function mostrarEstatisticasLista(anime) {
+  const caixa = document.getElementById("estatisticas-comunidade");
+  const { data, error } = await clienteSupabase().rpc("estatisticas_lista_anime", { p_mal_id: anime.id });
+  const e = data?.[0];
+  if (error || !e) return;
+  const linhas = [
+    ["assistido", "Já assistiram", e.assistido],
+    ["assistindo", "Assistindo", e.assistindo],
+    ["pretendo", "Pretendem assistir", e.pretendo],
+    ["dropado", "Droparam", e.dropado],
+  ];
+  const maior = Math.max(1, ...linhas.map((l) => l[2]));
+  caixa.innerHTML = `
+    <section class="estatisticas-lista" aria-label="Estatísticas no AnimeSe">
+      <h2>No AnimeSe</h2>
+      ${e.total ? `<p class="secao-descricao">${formatarNumero(e.total)} ${e.total === 1 ? "pessoa tem" : "pessoas têm"} este anime na lista.</p>
+      <ul>${linhas.map(([id, nome, n]) => `
+        <li>
+          <span class="estat-nome">${nome}</span>
+          <span class="estat-barra"><span class="st-fundo-${id}" style="width:${Math.round((n / maior) * 100)}%"></span></span>
+          <strong>${formatarNumero(n)}</strong>
+          <small>${e.total ? Math.round((n / e.total) * 100) : 0}%</small>
+        </li>`).join("")}</ul>`
+      : `<p class="secao-descricao">Ninguém do AnimeSe colocou este anime na lista ainda. Seja o primeiro!</p>`}
+    </section>`;
+}
+
 async function mostrarAmigos(anime) {
   const caixa = document.getElementById("amigos-anime");
   const dados = await amigosNoAnime(anime.id).catch(() => null);

@@ -3,12 +3,12 @@
 // curtir/apagar, imagem ampliada e o formulário de criar/editar página.
 // ============================================================
 
-import { esc, toast, entrar, caixaErro } from "./ui.js";
+import { esc, toast, entrar, caixaErro, avatarHtml, nomeComTag, temSeloApoiador } from "./ui.js";
 import { tempoAtras } from "./comunidade.js";
 import { usuarioAtual } from "./store.js";
 import { videoIncorporavel, REDES } from "./perfis.js";
 import {
-  curtir, republicar, apagarPublicacao, editarPublicacao, enviarImagem, pedirPagina, editarPagina, limparSlug,
+  curtir, republicar, apagarPublicacao, editarPublicacao, comentarios, comentar, apagarComentario, enviarImagem, pedirPagina, editarPagina, limparSlug,
   publicacoes, minhasCurtidas, minhasRepublicacoes, POR_VEZ,
 } from "./paginas-dados.js";
 
@@ -59,7 +59,11 @@ export function cardPublicacao(post, { curtido = false, republicado = false, pod
                 aria-label="${republicado ? "Desfazer republicação" : "Republicar no seu perfil"}" title="${republicado ? "Desfazer republicação" : "Republicar no seu perfil"}">
           <span aria-hidden="true">🔁</span> <span class="n-republicacoes">${post.reposts_count || 0}</span>
         </button>
+        ${post.comments_count === undefined ? "" : `<button type="button" class="btn-curtir btn-comentar" data-comentarios="${post.id}" aria-expanded="false" aria-label="Comentários" title="Comentários">
+          <span aria-hidden="true">💬</span> <span class="n-comentarios">${post.comments_count || 0}</span>
+        </button>`}
       </footer>
+      <section class="comentarios" hidden aria-label="Comentários"></section>
     </article>`;
 }
 
@@ -67,7 +71,7 @@ export function cardPublicacao(post, { curtido = false, republicado = false, pod
  * Liga curtir, apagar e ampliar imagem dentro de `container`.
  * obterPost(id) devolve o objeto da publicação; aoApagar(id) é chamado depois de apagar.
  */
-export function ligarPublicacoes(container, { obterPost, aoApagar = () => {} }) {
+export function ligarPublicacoes(container, { obterPost, aoApagar = () => {}, eu = null, souAdmin = false }) {
   // Textos longos aparecem recolhidos, com "Ver mais"
   marcarTextosLongos(container);
   ajustarVideos(container);
@@ -76,6 +80,10 @@ export function ligarPublicacoes(container, { obterPost, aoApagar = () => {} }) 
   container.addEventListener("click", async (e) => {
     const bPlay = e.target.closest("[data-play]");
     if (bPlay) return tocarVideo(bPlay);
+    const bComentarios = e.target.closest("[data-comentarios]");
+    if (bComentarios) return alternarComentarios(bComentarios, obterPost(Number(bComentarios.dataset.comentarios)), { eu, souAdmin });
+    const bApagarComentario = e.target.closest("[data-apagar-comentario]");
+    if (bApagarComentario) return removerComentario(bApagarComentario);
     const bMenu = e.target.closest("[data-menu-post]");
     if (bMenu) {
       const opcoes = bMenu.nextElementSibling;
@@ -216,6 +224,86 @@ function ajustarVideos(container) {
       botao.querySelector(".video-play-rede")?.remove();
     }
   });
+}
+
+// ------------------------------------------------------------
+// Comentários
+// ------------------------------------------------------------
+const nomeDe = (p) => p?.nickname || p?.display_name?.split(" ")[0] || "Usuário";
+
+function comentarioHtml(c, podeApagar) {
+  const a = c.autor;
+  return `
+    <li class="comentario" data-comentario="${c.id}">
+      <a href="usuario.html?id=${c.user_id}" class="comentario-avatar" tabindex="-1">${avatarHtml(a?.avatar_url, nomeDe(a), temSeloApoiador(a?.supporter_until))}</a>
+      <div class="comentario-corpo">
+        <div class="comentario-autor">${nomeComTag(nomeDe(a), a?.tag, a?.favorite_title, `usuario.html?id=${c.user_id}`)} <time datetime="${c.created_at}">${tempoAtras(c.created_at)}</time></div>
+        <p>${textoComLinks(c.body)}</p>
+      </div>
+      ${podeApagar ? `<button type="button" class="comentario-apagar" data-apagar-comentario="${c.id}" aria-label="Apagar comentário" title="Apagar comentário">×</button>` : ""}
+    </li>`;
+}
+
+async function alternarComentarios(botao, post, { eu, souAdmin }) {
+  const card = botao.closest(".publicacao");
+  const area = card.querySelector(".comentarios");
+  const abrir = area.hidden;
+  area.hidden = !abrir;
+  botao.setAttribute("aria-expanded", String(abrir));
+  if (!abrir || area.dataset.carregado) return;
+  area.dataset.carregado = "1";
+  eu = eu || (await usuarioAtual());
+  const donoPagina = post?.pagina?.owner_id === eu?.id;
+  const pode = (c) => Boolean(eu && (c.user_id === eu.id || donoPagina || souAdmin));
+  area.innerHTML = `<ol class="lista-comentarios"><li class="comentario-aviso">Carregando comentários…</li></ol>
+    ${eu ? `<form class="form-comentario">
+      <label class="sr-only" for="comentar-${post.id}">Escreva um comentário</label>
+      <textarea id="comentar-${post.id}" rows="1" maxlength="1000" placeholder="Escreva um comentário…"></textarea>
+      <button type="submit" class="btn btn-primario btn-pequeno">Comentar</button>
+    </form>` : `<p class="comentario-aviso"><button type="button" class="link-entrar">Entre com sua conta</button> para comentar.</p>`}`;
+  const lista = area.querySelector(".lista-comentarios");
+  try {
+    const itens = await comentarios(post.id);
+    lista.innerHTML = itens.length ? itens.map((c) => comentarioHtml(c, pode(c))).join("") : `<li class="comentario-aviso vazio-comentarios">Seja o primeiro a comentar.</li>`;
+  } catch (err) {
+    lista.innerHTML = `<li class="comentario-aviso">${esc(err.message)}</li>`;
+  }
+  area.querySelector(".link-entrar")?.addEventListener("click", entrar);
+  const form = area.querySelector(".form-comentario");
+  if (!form) return;
+  const campo = form.querySelector("textarea");
+  campo.addEventListener("input", () => { campo.style.height = "auto"; campo.style.height = Math.min(campo.scrollHeight, 160) + "px"; });
+  campo.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); } });
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!campo.value.trim()) return;
+    const enviar = form.querySelector('[type="submit"]');
+    enviar.disabled = true;
+    try {
+      const c = await comentar(post.id, campo.value);
+      lista.querySelector(".vazio-comentarios")?.remove();
+      lista.insertAdjacentHTML("beforeend", comentarioHtml(c, true));
+      campo.value = ""; campo.style.height = "auto";
+      const n = card.querySelector(".n-comentarios");
+      n.textContent = Number(n.textContent) + 1;
+      post.comments_count = Number(n.textContent);
+    } catch (err) { toast(err.message); }
+    enviar.disabled = false;
+    campo.focus();
+  });
+  campo.focus();
+}
+
+async function removerComentario(botao) {
+  if (!confirm("Apagar este comentário?")) return;
+  const item = botao.closest(".comentario");
+  try {
+    await apagarComentario(Number(botao.dataset.apagarComentario));
+    const card = botao.closest(".publicacao");
+    item.remove();
+    const n = card.querySelector(".n-comentarios");
+    n.textContent = Math.max(0, Number(n.textContent) - 1);
+  } catch (err) { toast(err.message); }
 }
 
 function fecharMenus() {
@@ -394,6 +482,7 @@ export async function listaDePublicacoes(container, { paginas = null, eu = null,
   let primeiraVez = true;
 
   ligarPublicacoes(lista, {
+    eu, souAdmin,
     obterPost: (id) => posts.get(id),
     aoApagar: (id) => { posts.delete(id); if (!lista.querySelector(".publicacao")) lista.innerHTML = vazio(); },
   });

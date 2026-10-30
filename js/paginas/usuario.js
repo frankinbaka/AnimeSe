@@ -208,7 +208,7 @@ async function mostrar(p) {
         curtido: curtidas.has(post.id), republicado: minhas.has(post.id),
         rotulo: `${souEu ? "Você republicou" : `${esc(nome)} republicou`} ${haQuanto(post.republicadoEm)}`,
       })).join("")}</div>`;
-      ligarPublicacoes(painel.querySelector(".lista-republicadas"), { obterPost: (id) => republicadas.find((x) => x.id === id) });
+      ligarPublicacoes(painel.querySelector(".lista-republicadas"), { eu, obterPost: (id) => republicadas.find((x) => x.id === id) });
     },
     republicados() {
       if (!republicados.length) return (painel.innerHTML = vazio(`${pronome} ainda não republicou nada do feed.`));

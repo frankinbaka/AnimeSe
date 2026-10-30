@@ -114,6 +114,7 @@ function itemHtml(n, ator) {
   const tipos = {
     curtida: [`${quem} ${plural ? "curtiram" : "curtiu"} a publicação ${trecho(d)} da sua página.`, `pagina.html?p=${esc(d.slug || "")}`, avatarHtml(ator?.avatar_url, nomeDe(ator), temSeloApoiador(ator?.supporter_until)), "♥"],
     republicacao: [`${quem} ${plural ? "republicaram" : "republicou"} a publicação ${trecho(d)} da sua página.`, `pagina.html?p=${esc(d.slug || "")}`, avatarHtml(ator?.avatar_url, nomeDe(ator), temSeloApoiador(ator?.supporter_until)), "🔁"],
+    comentario: [`${quem} ${plural ? "comentaram" : "comentou"} na publicação ${trecho(d)} da sua página${d.comentario && !plural ? `: “${esc(d.comentario)}”` : "."}`, `pagina.html?p=${esc(d.slug || "")}`, avatarHtml(ator?.avatar_url, nomeDe(ator), temSeloApoiador(ator?.supporter_until)), "💬"],
     pagina_aprovada: [`Sua página <strong>${esc(d.nome || "")}</strong> foi aprovada! Já pode publicar.`, `pagina.html?p=${esc(d.slug || "")}`, icone("🎉")],
     pagina_recusada: [`O pedido da página <strong>${esc(d.nome || "")}</strong> foi recusado.${d.nota ? ` Recado do admin: ${esc(d.nota)}` : ""}`, "paginas.html?aba=minhas", icone("📝")],
     pagina_suspensa: [`Sua página <strong>${esc(d.nome || "")}</strong> foi suspensa.${d.nota ? ` Motivo: ${esc(d.nota)}` : ""}`, "paginas.html?aba=minhas", icone("⛔")],

@@ -113,6 +113,7 @@ const LINKS = [
   { href: "buscar.html", texto: "Buscar", classe: "nav-buscar" },
   { href: "sortear.html", texto: "O que assistir?" },
   { href: "comunidade.html", texto: "Comunidade" },
+  { href: "quiz.html", texto: "Quiz" },
   { href: "lista.html", texto: "Minha lista" },
   { href: "apoiar.html", texto: "Apoiar ♥", classe: "nav-apoiar" },
 ];
