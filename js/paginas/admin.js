@@ -839,20 +839,28 @@ async function mostrarQuiz() {
       <h2>Perguntas <small class="dica">${ativas.length} ativas de ${perguntas.length}</small></h2>
       ${ativas.length < 10 ? `<div class="aviso">Cadastre pelo menos 10 perguntas ativas para o desafio automático funcionar.</div>` : ""}
       <div class="form-acoes"><button type="button" class="btn btn-primario" id="btn-nova-pergunta">+ Nova pergunta</button>
+        <button type="button" class="btn btn-contorno" id="btn-importar">Importar do Open Trivia DB</button>
+        <select id="filtro-situacao" class="quiz-filtro" style="flex:0 1 180px">
+          <option value="">Todas</option><option value="ativas">Ativas</option><option value="inativas">Desativadas</option><option value="importadas">Importadas (revisar)</option>
+        </select>
         <input type="search" id="filtro-perguntas" class="quiz-filtro" placeholder="Filtrar por texto ou anime…"></div>
+      <p class="dica" id="progresso-importacao" hidden></p>
       <div id="area-pergunta"></div>
       <ul class="quiz-admin-perguntas" id="lista-perguntas"></ul>
     </div>`;
 
   const lista = alvo.querySelector("#lista-perguntas");
-  const desenharLista = (filtro = "") => {
-    const f = filtro.toLowerCase();
-    const itens = perguntas.filter((q) => !f || q.enunciado.toLowerCase().includes(f) || (q.anime || "").toLowerCase().includes(f));
+  const desenharLista = () => {
+    const f = alvo.querySelector("#filtro-perguntas").value.toLowerCase();
+    const situacao = alvo.querySelector("#filtro-situacao").value;
+    const itens = perguntas.filter((q) => (!f || q.enunciado.toLowerCase().includes(f) || (q.anime || "").toLowerCase().includes(f))
+      && (!situacao || (situacao === "ativas" ? q.ativa : situacao === "inativas" ? !q.ativa : q.origem === "opentdb")));
     lista.innerHTML = itens.map((q) => `
       <li class="${q.ativa ? "" : "inativa"}" data-id="${q.id}">
         <div>
           <p><strong>${esc(q.enunciado)}</strong></p>
-          <p class="dica">${q.anime ? esc(q.anime) + " · " : ""}${DIFICULDADES[q.dificuldade]} · certa: ${esc(q.alternativas[q.correta])} · usada ${q.vezes_usada}×${q.ativa ? "" : " · <strong>inativa</strong>"}</p>
+          <p class="dica">${q.anime ? esc(q.anime) + " · " : ""}${DIFICULDADES[q.dificuldade]} · certa: ${esc(q.alternativas[q.correta])} · usada ${q.vezes_usada}×${q.ativa ? "" : " · <strong>inativa</strong>"}${q.origem === "opentdb" ? " · importada" : ""}</p>
+          ${q.original ? `<p class="dica quiz-original">Original: ${esc(q.original.pergunta)} — <strong>${esc(q.original.certa)}</strong></p>` : ""}
         </div>
         <div class="quiz-admin-acoes">
           <button type="button" class="btn btn-contorno btn-pequeno" data-editar-q="${q.id}">Editar</button>
@@ -862,7 +870,39 @@ async function mostrarQuiz() {
       </li>`).join("") || `<li class="vazio">Nenhuma pergunta encontrada.</li>`;
   };
   desenharLista();
-  alvo.querySelector("#filtro-perguntas").addEventListener("input", (e) => desenharLista(e.target.value));
+  alvo.querySelector("#filtro-perguntas").addEventListener("input", desenharLista);
+  alvo.querySelector("#filtro-situacao").addEventListener("change", desenharLista);
+
+  // ----- Importar do Open Trivia DB (traduz e salva desativadas) -----
+  alvo.querySelector("#btn-importar").addEventListener("click", async (e) => {
+    if (!confirm("Importar todas as perguntas de anime do Open Trivia DB? Elas são traduzidas pelo DeepL e entram DESATIVADAS para você revisar. Leva alguns minutos.")) return;
+    const botao = e.currentTarget;
+    botao.disabled = true;
+    const progresso = alvo.querySelector("#progresso-importacao");
+    progresso.hidden = false;
+    const { data: sessao } = await db.auth.getSession();
+    const { SUPABASE_ANON_KEY } = await import("../config.js");
+    let token = "", total = 0, lotes = 0;
+    try {
+      for (;;) {
+        progresso.textContent = `Importando… lote ${lotes + 1} (${total} novas até agora)`;
+        const r = await fetch(`/api/importar-quiz${token ? `?token=${encodeURIComponent(token)}` : ""}`, {
+          headers: { Authorization: `Bearer ${sessao.session.access_token}`, apikey: SUPABASE_ANON_KEY },
+        });
+        const j = await r.json();
+        if (r.status === 429) { token = j.token || token; await new Promise((ok) => setTimeout(ok, 6000)); continue; }
+        if (!r.ok) throw new Error(j.erro || "Falha na importação");
+        token = j.token; total += j.importadas; lotes++;
+        if (j.fim) break;
+        await new Promise((ok) => setTimeout(ok, 5500)); // pedido do Open Trivia DB
+      }
+      toast(`Importação concluída: ${total} perguntas novas, todas desativadas para revisão`);
+      mostrarQuiz();
+    } catch (err) {
+      progresso.textContent = `Parou: ${err.message}. ${total} perguntas foram salvas. Pode clicar de novo para continuar (repetidas são ignoradas).`;
+      botao.disabled = false;
+    }
+  });
 
   // ----- Formulário de pergunta -----
   const area = alvo.querySelector("#area-pergunta");

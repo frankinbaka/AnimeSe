@@ -56,12 +56,12 @@ async function mostrarDesafio() {
       <h2>${esc(d.titulo || "Desafio do dia")}</h2>
       <ul class="quiz-regras">
         <li><strong>${d.total}</strong> perguntas</li>
-        <li><strong>10</strong> minutos</li>
+        <li><strong>${d.segundos || 20}s</strong> por pergunta</li>
         <li><strong>10</strong> pontos por acerto</li>
         <li><strong>1</strong> tentativa por dia</li>
       </ul>
-      <p class="secao-descricao">As respostas não podem ser trocadas depois de confirmadas e o gabarito só aparece no fim.
-        Em caso de empate, fica na frente quem terminou mais rápido.</p>
+      <p class="secao-descricao">Você tem ${d.segundos || 20} segundos para cada pergunta: se o tempo acabar, ela conta como erro.
+        A resposta não pode ser trocada depois de confirmada e o gabarito só aparece no fim. Em caso de empate, fica na frente quem respondeu mais rápido.</p>
       ${eu ? `<button type="button" class="btn btn-primario btn-grande" id="btn-comecar">${continuar ? "Continuar desafio" : "Começar desafio"}</button>`
            : `<button type="button" class="btn btn-primario btn-grande" id="btn-entrar-quiz">Entrar com Google para jogar</button>`}
       <p class="quiz-participantes">${d.participantes ? `${formatarNumero(d.participantes)} ${d.participantes === 1 ? "pessoa já jogou" : "pessoas já jogaram"} hoje` : "Seja o primeiro a jogar hoje!"}</p>
@@ -81,7 +81,8 @@ function mostrarPergunta(estado) {
   // Relógio pelo horário do servidor (o do computador pode estar errado)
   const diferenca = new Date(estado.agora).getTime() - Date.now();
   const prazo = new Date(estado.prazo).getTime();
-  const restante = () => Math.max(0, Math.round((prazo - (Date.now() + diferenca)) / 1000));
+  const restante = () => Math.max(0, Math.ceil((prazo - (Date.now() + diferenca)) / 1000));
+  const segundos = estado.segundos || 20;
   let escolha = null;
 
   alvo.innerHTML = `
@@ -90,6 +91,7 @@ function mostrarPergunta(estado) {
         <span>Pergunta <strong>${q.ordem}</strong> de ${estado.total}</span>
         <span class="quiz-relogio" id="quiz-relogio" aria-live="off">⏱ —</span>
       </div>
+      <div class="quiz-tempo" aria-hidden="true"><span id="quiz-tempo-barra"></span></div>
       <div class="quiz-progresso" role="progressbar" aria-valuemin="0" aria-valuemax="${estado.total}" aria-valuenow="${q.ordem - 1}">
         <span style="width:${((q.ordem - 1) / estado.total) * 100}%"></span>
       </div>
@@ -106,22 +108,31 @@ function mostrarPergunta(estado) {
     </section>`;
 
   const relogioEl = alvo.querySelector("#quiz-relogio");
+  const barraTempo = alvo.querySelector("#quiz-tempo-barra");
+  let esgotou = false;
   const tick = async () => {
     const s = restante();
-    relogioEl.textContent = `⏱ ${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-    relogioEl.classList.toggle("acabando", s <= 60);
-    if (s <= 0) {
+    relogioEl.textContent = `⏱ ${s}s`;
+    relogioEl.classList.toggle("acabando", s <= 5);
+    barraTempo.style.width = `${Math.min(100, (s / segundos) * 100)}%`;
+    barraTempo.classList.toggle("acabando", s <= 5);
+    if (s <= 0 && !esgotou) {
+      // Tempo da pergunta acabou: conta como erro e segue
+      esgotou = true;
       clearInterval(relogio);
-      toast("O tempo acabou!");
-      await rpc("quiz_do_dia").catch(() => {}); // o banco fecha a tentativa
-      mostrarResultado();
+      botoes.forEach((b) => (b.disabled = true));
+      confirmar.disabled = true;
+      toast("Tempo esgotado nesta pergunta!");
+      try {
+        const r = await rpc("quiz_responder", { p_tentativa: estado.tentativa, p_ordem: q.ordem, p_escolha: null });
+        if (r.fim) { document.onkeydown = null; mostrarResultado(); } else mostrarPergunta(r);
+      } catch { try { mostrarPergunta(await rpc("quiz_iniciar")); } catch { mostrarDesafio(); } }
     }
   };
-  tick();
-  relogio = setInterval(tick, 1000);
-
   const botoes = alvo.querySelectorAll(".quiz-alternativa");
   const confirmar = alvo.querySelector("#btn-confirmar");
+  tick();
+  relogio = setInterval(tick, 250);
   botoes.forEach((b) => b.addEventListener("click", () => {
     escolha = Number(b.dataset.i);
     botoes.forEach((x) => x.setAttribute("aria-checked", String(x === b)));
@@ -135,12 +146,14 @@ function mostrarPergunta(estado) {
   };
   confirmar.addEventListener("click", async () => {
     if (escolha === null) return;
+    if (esgotou) return;
+    clearInterval(relogio);
     confirmar.disabled = true;
     botoes.forEach((b) => (b.disabled = true));
     try {
       const r = await rpc("quiz_responder", { p_tentativa: estado.tentativa, p_ordem: q.ordem, p_escolha: escolha });
       if (r.fim) { clearInterval(relogio); document.onkeydown = null; if (r.tempo_esgotado) toast("O tempo acabou!"); mostrarResultado(); }
-      else mostrarPergunta(r);
+      else { if (r.expirou) toast("O tempo dessa pergunta já tinha acabado."); mostrarPergunta(r); }
     } catch (err) {
       toast(err.message);
       // Recarrega o estado verdadeiro do banco
@@ -179,7 +192,7 @@ async function mostrarResultado(desafio = null) {
           <li class="${g.acertou ? "acertou" : "errou"}">
             <p class="quiz-gabarito-pergunta"><span aria-hidden="true">${g.acertou ? "✅" : "❌"}</span> ${esc(g.enunciado)}${g.anime ? ` <small>(${esc(g.anime)})</small>` : ""}</p>
             <p>Resposta certa: <strong>${esc(g.alternativas[g.certa])}</strong>
-              ${!g.acertou ? `<br>Sua resposta: ${g.escolha === null ? "<em>não respondeu</em>" : esc(g.alternativas[g.escolha])}` : ""}</p>
+              ${!g.acertou ? `<br>Sua resposta: ${g.escolha === null ? "<em>tempo esgotado</em>" : esc(g.alternativas[g.escolha])}` : ""}</p>
             ${g.explicacao ? `<p class="dica">${esc(g.explicacao)}</p>` : ""}
           </li>`).join("")}
       </ol>
